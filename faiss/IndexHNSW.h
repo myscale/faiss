@@ -152,6 +152,13 @@ struct IndexHNSWFlat : IndexHNSW {
 struct IndexHNSWPQ : IndexHNSW {
     IndexHNSWPQ();
     IndexHNSWPQ(int d, int pq_m, int M);
+
+    IndexHNSWPQ(int d, int pq_m, int nbits, int M, MetricType metric = METRIC_L2)
+            : IndexHNSW(new IndexPQ(d, pq_m, nbits, metric), M) {
+        own_fields = true;
+        is_trained = false;
+    }
+
     void train(idx_t n, const float* x) override;
 };
 
