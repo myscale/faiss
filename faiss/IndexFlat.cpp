@@ -19,8 +19,8 @@
 
 namespace faiss {
 
-IndexFlat::IndexFlat(idx_t d, MetricType metric)
-        : IndexFlatCodes(sizeof(float) * d, d, metric) {}
+IndexFlat::IndexFlat(idx_t d, size_t max_points_, MetricType metric)
+        : IndexFlatCodes(sizeof(float) * d, d, metric), max_points(max_points_) {}
 
 void IndexFlat::search(
         idx_t n,
@@ -84,6 +84,11 @@ void IndexFlat::compute_distance_subset(
         default:
             FAISS_THROW_MSG("metric type not supported");
     }
+}
+
+void IndexFlat::train(idx_t n, const float* x) {
+    // resize vector size to avoid excessive memory allocation
+    this->codes.reserve(sizeof(float) * max_points);
 }
 
 namespace {

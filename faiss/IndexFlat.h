@@ -18,7 +18,7 @@ namespace faiss {
 
 /** Index that stores the full vectors and performs exhaustive search */
 struct IndexFlat : IndexFlatCodes {
-    explicit IndexFlat(idx_t d, MetricType metric = METRIC_L2);
+    explicit IndexFlat(idx_t d, size_t max_points_ = 0, MetricType metric = METRIC_L2);
 
     void search(
             idx_t n,
@@ -62,12 +62,17 @@ struct IndexFlat : IndexFlatCodes {
 
     IndexFlat() {}
 
+    virtual void train(idx_t n, const float* x) override;
+
     FlatCodesDistanceComputer* get_FlatCodesDistanceComputer() const override;
 
     /* The stanadlone codec interface (just memcopies in this case) */
     void sa_encode(idx_t n, const float* x, uint8_t* bytes) const override;
 
     void sa_decode(idx_t n, const uint8_t* bytes, float* x) const override;
+
+protected:
+    size_t max_points;
 };
 
 struct IndexFlatIP : IndexFlat {
