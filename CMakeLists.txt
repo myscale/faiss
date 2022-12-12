@@ -13,7 +13,10 @@ project(faiss
   LANGUAGES CXX)
 include(GNUInstallDirs)
 
-set(CMAKE_CXX_STANDARD 11)
+if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  # don't set these variables when used as a subproject
+  set(CMAKE_CXX_STANDARD 11)
+endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
