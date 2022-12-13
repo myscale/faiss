@@ -218,6 +218,9 @@ typename C::T partition_fuzzy_median3(
 
 } // namespace partitioning
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wambiguous-reversed-operator"
+
 /******************************************************************
  * SIMD routines when vals is an aligned array of uint16_t
  ******************************************************************/
@@ -1321,6 +1324,8 @@ void simd_histogram_8(
 }
 
 #endif
+
+#pragma clang diagnostic pop
 
 void PartitionStats::reset() {
     memset(this, 0, sizeof(*this));
