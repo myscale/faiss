@@ -20,6 +20,7 @@ set(FAISS_SRC
   IndexFlat.cpp
   IndexFlatCodes.cpp
   IndexHNSW.cpp
+  IndexHNSWfast.cpp
   IndexIDMap.cpp
   IndexIVF.cpp
   IndexIVFAdditiveQuantizer.cpp
@@ -53,6 +54,7 @@ set(FAISS_SRC
   impl/IDSelector.cpp
   impl/FaissException.cpp
   impl/HNSW.cpp
+  impl/HNSWfast.cpp
   impl/NSG.cpp
   impl/PolysemousTraining.cpp
   impl/ProductQuantizer.cpp
