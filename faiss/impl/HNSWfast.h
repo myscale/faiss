@@ -42,7 +42,8 @@ class VisitedListPool;
 struct HNSWfastStatistics;
 struct HNSWfastStatInfo;
 
-struct HNSWfast {
+class HNSWfast {
+public:
     /// internal storage of vectors (32 bits: this is expensive)
     typedef int storage_idx_t;
 
@@ -178,8 +179,7 @@ struct HNSWfast {
     size_t link_size;
     double level_constant;
     VisitedListPool *visited_list_pool;
-    std::vector<std::mutex> link_list_locks;
-    std::mutex global;
+
     bool has_deletion = false;
 
     bool loaded = false;
@@ -255,6 +255,13 @@ struct HNSWfast {
             idx_t* I,
             float* D,
             const SearchParametersHNSW* param = nullptr) const;
+
+    HNSWfast & operator=(const HNSWfast & rhs){
+        return *this;
+    }
+private:
+    std::vector<std::mutex> link_list_locks;
+    std::mutex global;
 };
 
 
@@ -373,10 +380,14 @@ struct HNSWfastStats {
     }
 };
 
-struct HNSWfastStatistics {
+class HNSWfastStatistics {
+public:
     HNSWfastStatistics():max_level(0) {}
+    
+    HNSWfastStatistics & operator=(const HNSWfastStatistics & rhs){
+        return *this;
+    }
     int max_level;
-    std::mutex hash_lock;
     std::vector<int> distribution;
     std::unordered_map<unsigned int, uint64_t> access_cnt;
     void GetStatistics(std::vector<size_t> &ret, size_t &access_total) {
@@ -392,10 +403,12 @@ struct HNSWfastStatistics {
         std::sort(ret.begin(), ret.end(), std::greater<int64_t>());
     }
 
-    void
-    Clear() {
+    void Clear() {
         access_cnt.clear();
     }
+
+private:
+    std::mutex hash_lock;
 };
 
 struct HNSWfastStatInfo {

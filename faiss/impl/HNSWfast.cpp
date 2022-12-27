@@ -423,8 +423,12 @@ void HNSWfast::searchKnn(DistanceComputer& qdis, int k,
             }
         }
     }
+    int ef_search = efSearch;
+    if(param) {
+        ef_search = param->efSearch;
+    }
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates =
-            search_base_layer(qdis, ep, std::max(efSearch, k), dist, param);
+            search_base_layer(qdis, ep, std::max(ef_search, k), dist, param);
     while (top_candidates.size() > k)
         top_candidates.pop();
     int rst_num = top_candidates.size();

@@ -97,8 +97,6 @@ struct IndexHNSWfast : Index {
 
     void reset () override;
 
-    size_t cal_size();
-
     void init_hnsw(idx_t total);
 
     void init_hnsw();
@@ -144,9 +142,6 @@ struct IndexHNSWfast2Level : IndexHNSWfast {
     IndexHNSWfast2Level(Index *quantizer, size_t nlist, int m_pq, int M);
 
     void flip_to_ivf();
-
-    void search (idx_t n, const float *x, idx_t k,
-                 float *distances, idx_t *labels) const;
 
     /// entry point for search
     void search (idx_t n, const float *x, idx_t k,
