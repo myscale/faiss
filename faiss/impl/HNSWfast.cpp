@@ -15,7 +15,7 @@ namespace faiss {
  * hnsw structure implementation
  **************************************************************/
 
-HNSWfast::HNSWfast(int M) : M(M), rng(12345) {
+HNSWfast::HNSWfast(int M) : M(M), rng(100) {
     level_generator.seed(100);
     max_level = -1;
     entry_point = -1;
@@ -141,6 +141,18 @@ int HNSWfast::prepare_level_tab(size_t n, bool preset_levels)
     return max_level;
 }
 
+void HNSWfast::dump_level0(int current) {
+    std::cout << "hnswfast: " << __func__ << ": " << current << std::endl;
+    for(int i=0; i<=current; i++) {
+        std::cout << "\t" << i << ":";
+        int *curObj_link = get_neighbor_link(i, 0);
+        auto curObj_nei_num = get_neighbors_num(curObj_link);
+        for(int j=0; j<curObj_nei_num; j++) {
+            std::cout << curObj_link[j+1] << ", ";
+        }
+        std::cout << std::endl;
+    }
+}
 
 /**************************************************************
  * new implementation of hnsw ispired by hnswlib
@@ -156,7 +168,6 @@ void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
     if (pt_level <= maxlevel_copy)
         temp_lock.unlock();
     int currObj = entry_point;
-    int ep_copy = entry_point;
 
     if (currObj != -1) {
         if (pt_level < maxlevel_copy) {
@@ -199,7 +210,7 @@ void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
         entry_point = pt_id;
         max_level = pt_level;
     }
-
+    //dump_level0(pt_id);
 }
 
 std::priority_queue<Node, std::vector<Node>, CompareByFirst>
@@ -221,7 +232,7 @@ HNSWfast::search_layer(DistanceComputer& ptdis,
 
     while (!candidate_set.empty()) {
         Node currNode = candidate_set.top();
-        if ((-currNode.first) > lb)
+        if ((-currNode.first) > lb && top_candidates.size() == efConstruction)
             break;
         candidate_set.pop();
         int cur_id = currNode.second;
@@ -275,7 +286,7 @@ HNSWfast::search_base_layer(DistanceComputer& ptdis,
 
     while (!candidate_set.empty()) {
         Node currNode = candidate_set.top();
-        if ((-currNode.first) > lb)
+        if ((-currNode.first) > lb && top_candidates.size() == ef)
             break;
         candidate_set.pop();
         int cur_id = currNode.second;
@@ -310,8 +321,8 @@ HNSWfast::make_connection(DistanceComputer& ptdis,
     int maxM = level ? M : M << 1;
     int *selectedNeighbors = (int*)malloc(sizeof(int) * maxM);
     int selectedNeighborsNum = 0;
-    prune_neighbors(ptdis, cand, maxM, selectedNeighbors, selectedNeighborsNum);
-    if (selectedNeighborsNum > maxM)
+    prune_neighbors(ptdis, cand, M, selectedNeighbors, selectedNeighborsNum);
+    if (selectedNeighborsNum > M)
         throw std::runtime_error("Wrong size of candidates returned by prune_neighbors!");
 
     int next_closest_entry_point = selectedNeighbors[0];
@@ -321,7 +332,7 @@ HNSWfast::make_connection(DistanceComputer& ptdis,
         throw std::runtime_error("The newly inserted element should have blank link");
 
     set_neighbors_num(cur_link, selectedNeighborsNum);
-    for (auto i = 1; i <= selectedNeighborsNum; ++ i) {
+    for (auto i = 1; i <= selectedNeighborsNum; ++i) {
         if (cur_link[i])
             throw std::runtime_error("Possible memory corruption.");
         if (level > levels[selectedNeighbors[i - 1]])
@@ -389,7 +400,7 @@ void HNSWfast::prune_neighbors(DistanceComputer& ptdis,
             }
             if (good) {
                 ret[ret_len++] = (curr.second);
-                if (ret_len >= M) {
+                if (ret_len >= maxM) {
                     break;
                 }
             }

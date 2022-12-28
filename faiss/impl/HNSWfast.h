@@ -213,6 +213,8 @@ public:
         return (int)r;
     }
 
+    void dump_level0(int current);
+    
     void reset();
 
     int prepare_level_tab(size_t n, bool preset_levels = false);
