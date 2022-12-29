@@ -78,7 +78,7 @@ for i in range(test_number):
     hnswfast_sq_recall = hnswfast_sq_recall+len(intersect)
 
 hnswfast_sq_recall = float(hnswfast_sq_recall)/(k*test_number)
-print('hnswfast recall {}'.format(hnswfast_sq_recall))
+print('hnswfast sq recall {}'.format(hnswfast_sq_recall))
 
 # hnswfast pq
 hnswfast_pq_index = faiss.IndexHNSWfastPQ(dim, 20, M)
@@ -97,4 +97,4 @@ for i in range(test_number):
     hnswfast_pq_recall = hnswfast_pq_recall+len(intersect)
 
 hnswfast_pq_recall = float(hnswfast_pq_recall)/(k*test_number)
-print('hnswfast recall {}'.format(hnswfast_pq_recall))
+print('hnswfast pq recall {}'.format(hnswfast_pq_recall))
