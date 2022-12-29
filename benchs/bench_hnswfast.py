@@ -13,6 +13,10 @@ faiss.omp_set_num_threads(1)
 xb = np.random.random(size=(train_number, dim)).astype('float32')
 xq = np.random.random(size=(test_number, dim)).astype('float32')
 
+rs = np.random.RandomState(123)
+subset = rs.choice([i for i in range(len(xb))], 900, replace=False).astype("int64")
+print('id select(subset) size {}'.format(len(subset)))
+
 # hnswfast
 hnswfast_index.hnsw.efConstruction = 32
 hnswfast_index.init_hnsw(train_number)
@@ -98,3 +102,45 @@ for i in range(test_number):
 
 hnswfast_pq_recall = float(hnswfast_pq_recall)/(k*test_number)
 print('hnswfast pq recall {}'.format(hnswfast_pq_recall))
+
+# create id selector
+bitmap = np.zeros(len(xb), dtype=bool)
+bitmap[subset] = True
+#print('bitmap {}'.format(bitmap))
+bitmap = np.packbits(bitmap, bitorder='little')
+sel = faiss.IDSelectorBitmap(bitmap)
+# flat filtered
+params = faiss.SearchParameters()
+params.sel = sel
+D_flat_filtered, I_flat_filterd = flat_index.search(xq, k, params=params)
+
+
+# hnswfast sq filter
+params = faiss.SearchParametersHNSW()
+params.sel = sel
+params.efSearch = hnswfast_index.hnsw.efSearch
+D_hnswfast_sq_filter, I_hnswfast_sq_filter = hnswfast_sq_index.search(xq, k, params=params)
+
+hnswfast_sq_filter_recall = 0
+for i in range(test_number):
+    intersect = np.intersect1d(I_hnswfast_sq_filter[i], I_flat_filterd[i])
+    hnswfast_sq_filter_recall = hnswfast_sq_filter_recall+len(intersect)
+
+hnswfast_sq_filter_recall = float(hnswfast_sq_filter_recall)/(k*test_number)
+print('hnswfast sq with filter recall {}'.format(hnswfast_sq_filter_recall))
+#print('{}'.format(I_hnswfast_sq_filter))
+#print('{}'.format(I_hnswfast_sq))
+
+# hnsw sq filter
+params = faiss.SearchParametersHNSW()
+params.sel = sel
+params.efSearch = hnswfast_index.hnsw.efSearch
+D_hnsw, I_hnsw_filterd = hnsw_index.search(xq, k, params=params)
+
+hnsw_recall = 0
+for i in range(test_number):
+    intersect = np.intersect1d(I_hnsw_filterd[i], I_flat_filterd[i])
+    hnsw_recall = hnsw_recall+len(intersect)
+
+hnsw_recall = float(hnsw_recall)/(k*test_number)
+print('hnsw faiss with filter recall {}'.format(hnsw_recall))

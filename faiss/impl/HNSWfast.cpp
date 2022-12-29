@@ -299,7 +299,8 @@ HNSWfast::search_base_layer(DistanceComputer& ptdis,
                 float dcand = ptdis(candidate_id);
                 if (top_candidates.size() < ef || lb > dcand) {
                     candidate_set.emplace(-dcand, candidate_id);
-                    if ((!sel || sel->is_member(nearest)))
+                    // check if candidate_id is enabled
+                    if ((!sel || sel->is_member(candidate_id)))
                         top_candidates.emplace(dcand, candidate_id);
                     if (top_candidates.size() > ef)
                         top_candidates.pop();
