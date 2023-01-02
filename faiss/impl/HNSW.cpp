@@ -15,6 +15,8 @@
 #include <faiss/impl/DistanceComputer.h>
 #include <faiss/impl/IDSelector.h>
 
+#include <SearchIndex/Common/Utils.h>
+
 namespace faiss {
 
 /**************************************************************
@@ -603,6 +605,11 @@ int search_from_candidates(
         stats.n3 += ndis;
     }
 
+    SI_VLOG(10, "HNSW::search_from_candidates candidates_size=%d nstep=%d ndis=%d "
+                "num_skipped=%d num_tested=%d delta=%d\n",
+            candidates.size(), nstep, ndis, num_skipped, num_tested, num_tested - num_skipped);
+
+
     return nres;
 }
 
@@ -835,6 +842,7 @@ void HNSW::search_level_0(
  **************************************************************/
 
 void HNSW::MinimaxHeap::push(storage_idx_t i, float v) {
+    SI_VLOG(50, "MinimaxHeap::push k=%d, n=%d, valid=%d\n", k, n, nvalid);
     if (k == n) {
         if (v >= dis[0])
             return;
