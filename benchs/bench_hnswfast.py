@@ -36,6 +36,7 @@ hnswfast_recall = float(hnswfast_recall)/(k*test_number)
 print('hnswfast recall {}'.format(hnswfast_recall))
 
 # hnsw faiss
+#def test_hnsw_faiss():
 hnsw_index.hnsw.efConstruction = hnswfast_index.hnsw.efConstruction
 hnsw_index.hnsw.efSearch = hnswfast_index.hnsw.efSearch
 hnsw_index.add(xb)
@@ -48,22 +49,23 @@ for i in range(test_number):
 hnsw_recall = float(hnsw_recall)/(k*test_number)
 print('hnsw recall {}'.format(hnsw_recall))
 
+def test_hnswlib():
 # hnswlib
-import hnswlib
-p = hnswlib.Index(space='l2', dim=dim)  # possible options are l2, cosine or ip
-p.init_index(max_elements=train_number, ef_construction=hnswfast_index.hnsw.efConstruction, M=M)
-p.set_num_threads(8)
-p.add_items(xb)
-p.set_ef(hnswfast_index.hnsw.efSearch)
+    import hnswlib
+    p = hnswlib.Index(space='l2', dim=dim)  # possible options are l2, cosine or ip
+    p.init_index(max_elements=train_number, ef_construction=hnswfast_index.hnsw.efConstruction, M=M)
+    p.set_num_threads(8)
+    p.add_items(xb)
+    p.set_ef(hnswfast_index.hnsw.efSearch)
 
-labels, distances = p.knn_query(xq, k=k)
-hnswlib_recall = 0
-for i in range(test_number):
-    intersect = np.intersect1d(labels[i], I_flat[i])
-    hnswlib_recall = hnswlib_recall+len(intersect)
+    labels, distances = p.knn_query(xq, k=k)
+    hnswlib_recall = 0
+    for i in range(test_number):
+        intersect = np.intersect1d(labels[i], I_flat[i])
+        hnswlib_recall = hnswlib_recall+len(intersect)
 
-hnswlib_recall = float(hnswlib_recall)/(k*test_number)
-print('hnswlib recall {}'.format(hnswlib_recall))
+    hnswlib_recall = float(hnswlib_recall)/(k*test_number)
+    print('hnswlib recall {}'.format(hnswlib_recall))
 
 # hnswfast sq
 hnswfast_sq_index = faiss.IndexHNSWfastSQ(dim, faiss.ScalarQuantizer.QT_8bit, M)
@@ -72,17 +74,18 @@ hnswfast_sq_index.init_hnsw(train_number)
 hnswfast_sq_index.train(xb)
 hnswfast_sq_index.add(xb)
 
-hnswfast_sq_index.hnsw.efSearch = hnswfast_index.hnsw.efSearch
+def test_hnswfast_sq():
+    hnswfast_sq_index.hnsw.efSearch = hnswfast_index.hnsw.efSearch
 
-D_hnswfast_sq, I_hnswfast_sq = hnswfast_sq_index.search(xq, k)
+    D_hnswfast_sq, I_hnswfast_sq = hnswfast_sq_index.search(xq, k)
 
-hnswfast_sq_recall = 0
-for i in range(test_number):
-    intersect = np.intersect1d(I_hnswfast_sq[i], I_flat[i])
-    hnswfast_sq_recall = hnswfast_sq_recall+len(intersect)
+    hnswfast_sq_recall = 0
+    for i in range(test_number):
+        intersect = np.intersect1d(I_hnswfast_sq[i], I_flat[i])
+        hnswfast_sq_recall = hnswfast_sq_recall+len(intersect)
 
-hnswfast_sq_recall = float(hnswfast_sq_recall)/(k*test_number)
-print('hnswfast sq recall {}'.format(hnswfast_sq_recall))
+    hnswfast_sq_recall = float(hnswfast_sq_recall)/(k*test_number)
+    print('hnswfast sq recall {}'.format(hnswfast_sq_recall))
 
 # hnswfast pq
 hnswfast_pq_index = faiss.IndexHNSWfastPQ(dim, 20, M)
@@ -114,33 +117,35 @@ params = faiss.SearchParameters()
 params.sel = sel
 D_flat_filtered, I_flat_filterd = flat_index.search(xq, k, params=params)
 
+def hnswfast_sq_filter():
+    # hnswfast sq filter
+    params = faiss.SearchParametersHNSW()
+    params.sel = sel
+    params.efSearch = hnswfast_index.hnsw.efSearch
+    D_hnswfast_sq_filter, I_hnswfast_sq_filter = hnswfast_sq_index.search(xq, k, params=params)
 
-# hnswfast sq filter
-params = faiss.SearchParametersHNSW()
-params.sel = sel
-params.efSearch = hnswfast_index.hnsw.efSearch
-D_hnswfast_sq_filter, I_hnswfast_sq_filter = hnswfast_sq_index.search(xq, k, params=params)
+    hnswfast_sq_filter_recall = 0
+    for i in range(test_number):
+        intersect = np.intersect1d(I_hnswfast_sq_filter[i], I_flat_filterd[i])
+        hnswfast_sq_filter_recall = hnswfast_sq_filter_recall+len(intersect)
 
-hnswfast_sq_filter_recall = 0
-for i in range(test_number):
-    intersect = np.intersect1d(I_hnswfast_sq_filter[i], I_flat_filterd[i])
-    hnswfast_sq_filter_recall = hnswfast_sq_filter_recall+len(intersect)
+    hnswfast_sq_filter_recall = float(hnswfast_sq_filter_recall)/(k*test_number)
+    print('hnswfast sq with filter recall {}'.format(hnswfast_sq_filter_recall))
+    #print('{}'.format(I_hnswfast_sq_filter))
+    #print('{}'.format(I_hnswfast_sq))
 
-hnswfast_sq_filter_recall = float(hnswfast_sq_filter_recall)/(k*test_number)
-print('hnswfast sq with filter recall {}'.format(hnswfast_sq_filter_recall))
-#print('{}'.format(I_hnswfast_sq_filter))
-#print('{}'.format(I_hnswfast_sq))
+    # hnsw sq filter
+    params = faiss.SearchParametersHNSW()
+    params.sel = sel
+    params.efSearch = hnswfast_index.hnsw.efSearch
+    D_hnsw, I_hnsw_filterd = hnsw_index.search(xq, k, params=params)
 
-# hnsw sq filter
-params = faiss.SearchParametersHNSW()
-params.sel = sel
-params.efSearch = hnswfast_index.hnsw.efSearch
-D_hnsw, I_hnsw_filterd = hnsw_index.search(xq, k, params=params)
+    hnsw_recall = 0
+    for i in range(test_number):
+        intersect = np.intersect1d(I_hnsw_filterd[i], I_flat_filterd[i])
+        hnsw_recall = hnsw_recall+len(intersect)
 
-hnsw_recall = 0
-for i in range(test_number):
-    intersect = np.intersect1d(I_hnsw_filterd[i], I_flat_filterd[i])
-    hnsw_recall = hnsw_recall+len(intersect)
-
-hnsw_recall = float(hnsw_recall)/(k*test_number)
-print('hnsw faiss with filter recall {}'.format(hnsw_recall))
+    hnsw_recall = float(hnsw_recall)/(k*test_number)
+    print('hnsw faiss with filter recall {}'.format(hnsw_recall))
+test_hnswfast_sq()
+hnswfast_sq_filter()
