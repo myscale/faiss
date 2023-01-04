@@ -21,14 +21,12 @@ HNSWfast::HNSWfast(int M) : M(M), rng(100) {
     entry_point = -1;
     efSearch = 50;
     efConstruction = 70;
-    upper_beam = 1;
     level0_link_size = sizeof(int) * ((M << 1) | 1);
     link_size = sizeof(int) * (M + 1);
     level0_links = nullptr;
     linkLists = nullptr;
     level_constant = 1 / log(1.0 * M);
     visited_list_pool = nullptr;
-    target_level = 1;
 }
 
 void HNSWfast::init(int ntotal) {
@@ -161,7 +159,6 @@ void HNSWfast::dump_level0(int current) {
 using Node = faiss::HNSWfast::Node;
 using CompareByFirst = faiss::HNSWfast::CompareByFirst;
 void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
-
     std::unique_lock<std::mutex> lock_el(link_list_locks[pt_id]);
     std::unique_lock<std::mutex> temp_lock(global);
     int maxlevel_copy = max_level;

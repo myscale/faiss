@@ -62,7 +62,6 @@ struct IndexHNSWfast : Index {
 
     // the link strcuture
     HNSWfast hnsw;
-    mutable HNSWfastStatistics stats;
 
     mutable bool hnsw_written = false;
 
@@ -101,11 +100,7 @@ struct IndexHNSWfast : Index {
 
     void init_hnsw();
 
-    void update_stats(idx_t n, std::vector<HNSWfastStatInfo> &ret);
-
     void get_sorted_access_counts(std::vector<size_t> &ret, size_t &tot);
-    void clear_stats();
-    void set_target_level(const int tl);
 };
 
 

@@ -39,8 +39,6 @@ namespace faiss {
 
 struct DistanceComputer; // from AuxIndexStructures
 class VisitedListPool;
-struct HNSWfastStatistics;
-struct HNSWfastStatInfo;
 
 class HNSWfast {
 public:
@@ -159,10 +157,6 @@ public:
     /// level of each vector (base level = 1), size = ntotal
     std::vector<int> levels;
     std::vector<int> level_stats;
-    int target_level;
-
-    /// number of entry points in levels > 0.
-    int upper_beam;
 
     /// entry point in the search structure (one of the points with maximum level
     storage_idx_t entry_point;
@@ -260,6 +254,10 @@ public:
 
     HNSWfast & operator=(const HNSWfast & rhs){
         return *this;
+    }
+
+    void init_link_list_lock(int ntotal) {
+        std::vector<std::mutex>(ntotal).swap(link_list_locks);
     }
 private:
     std::vector<std::mutex> link_list_locks;
@@ -363,61 +361,5 @@ class VisitedListPool {
         return pool_size + sizeof(*this);
     }
 };
-
-struct HNSWfastStats {
-    size_t n1, n2, n3;
-    size_t ndis;
-    size_t nreorder;
-    bool view;
-
-    HNSWfastStats() {
-        reset();
-    }
-
-    void reset() {
-        n1 = n2 = n3 = 0;
-        ndis = 0;
-        nreorder = 0;
-        view = false;
-    }
-};
-
-class HNSWfastStatistics {
-public:
-    HNSWfastStatistics():max_level(0) {}
-    
-    HNSWfastStatistics & operator=(const HNSWfastStatistics & rhs){
-        return *this;
-    }
-    int max_level;
-    std::vector<int> distribution;
-    std::unordered_map<unsigned int, uint64_t> access_cnt;
-    void GetStatistics(std::vector<size_t> &ret, size_t &access_total) {
-        access_total = 0;
-        std::unique_lock<std::mutex> lock(hash_lock);
-        ret.clear();
-        ret.reserve(access_cnt.size());
-        for (auto &elem : access_cnt) {
-            ret.push_back(elem.second);
-            access_total += elem.second;
-        }
-        lock.unlock();
-        std::sort(ret.begin(), ret.end(), std::greater<int64_t>());
-    }
-
-    void Clear() {
-        access_cnt.clear();
-    }
-
-private:
-    std::mutex hash_lock;
-};
-
-struct HNSWfastStatInfo {
-    std::vector<unsigned int> access_points;
-};
-
-// global var that collects them all
-extern HNSWfastStats HNSWfast_stats;
 
 }  // namespace faiss

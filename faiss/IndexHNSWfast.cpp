@@ -46,8 +46,6 @@ using MinimaxHeap = HNSWfast::MinimaxHeap;
 using storage_idx_t = HNSWfast::storage_idx_t;
 using NodeDistFarther = HNSWfast::NodeDistFarther;
 
-HNSWfastStats HNSWfast_stats;
-
 /**************************************************************
  * add / search blocks of descriptors
  **************************************************************/
@@ -192,29 +190,6 @@ IndexHNSWfast::get_sorted_access_counts(std::vector<size_t> &ret, size_t &tot) {
     return;
 }
 
-void
-IndexHNSWfast::set_target_level(const int tl) {
-    hnsw.target_level = tl;
-}
-
-void
-IndexHNSWfast::update_stats(idx_t n, std::vector<HNSWfastStatInfo>& query_stats) {
-    for (auto i = 0; i < n; ++ i) {
-        for (auto j = 0; j < query_stats[i].access_points.size(); ++ j) {
-            auto tgt = stats.access_cnt.find(query_stats[i].access_points[j]);
-            if (tgt == stats.access_cnt.end())
-                stats.access_cnt[query_stats[i].access_points[j]] = 1;
-            else
-                tgt->second += 1;
-        }
-    }
-}
-
-void
-IndexHNSWfast::clear_stats() {
-    stats.Clear();
-}
-
 void IndexHNSWfast::train(idx_t n, const float* x)
 {
     FAISS_THROW_IF_NOT_MSG(storage,
@@ -234,8 +209,6 @@ void IndexHNSWfast::search (idx_t n, const float *x, idx_t k,
 
     idx_t check_period = InterruptCallback::get_period_hint (
             hnsw.max_level * d * hnsw.efSearch);
-
-    std::vector<HNSWfastStatInfo> query_stats;
 
     for (idx_t i0 = 0; i0 < n; i0 += check_period) {
         idx_t i1 = std::min(i0 + check_period, n);
@@ -280,8 +253,6 @@ void IndexHNSWfast::search (idx_t n, const float *x, idx_t k,
             distances[i] = -distances[i];
         }
     }
-
-    HNSWfast_stats.nreorder += nreorder;
 }
 
 
@@ -681,17 +652,6 @@ int search_from_candidates_2(const HNSWfast & hnsw,
             break;
         }
     }
-
-    if (level == 0) {
-#pragma omp critical
-        {
-            HNSWfast_stats.n1 ++;
-            if (candidates.size() == 0)
-                HNSWfast_stats.n2 ++;
-        }
-    }
-
-
     return nres;
 }
 
@@ -727,7 +687,7 @@ void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
             DistanceComputer *dis = storage_distance_computer(storage);
             ScopeDeleter1<DistanceComputer> del(dis);
 
-            int candidates_size = hnsw.upper_beam;
+            const int candidates_size = 1;
             MinimaxHeap candidates(candidates_size);
 
 #pragma omp for
@@ -756,7 +716,7 @@ void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
 
                 if (search_policy == 1) {
 
-                    for (int j = 0 ; j < hnsw.upper_beam && j < k; j++) {
+                    for (int j = 0 ; j < candidates_size && j < k; j++) {
                         if (idxi[j] < 0) break;
                         candidates.push (idxi[j], simi[j]);
                         // search_from_candidates adds them back
@@ -777,7 +737,7 @@ void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
 
                 } else if (search_policy == 2) {
 
-                    for (int j = 0 ; j < hnsw.upper_beam && j < k; j++) {
+                    for (int j = 0 ; j < candidates_size && j < k; j++) {
                         if (idxi[j] < 0) break;
                         candidates.push (idxi[j], simi[j]);
                     }
