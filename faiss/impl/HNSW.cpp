@@ -646,12 +646,6 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         }
     }
 
-    ++stats.n1;
-    if (candidates.size() == 0) {
-        ++stats.n2;
-    }
-    stats.n3 += ndis;
-
     return top_candidates;
 }
 
