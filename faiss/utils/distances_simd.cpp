@@ -953,7 +953,7 @@ float fvec_inner_product(const float* x, const float* y, size_t d) {
     msum2 = _mm_hadd_ps(msum2, msum2);
     return _mm_cvtss_f32(msum2);
 }
-
+#pragma message "use avx l2 compute"
 float fvec_L2sqr(const float* x, const float* y, size_t d) {
     __m256 msum1 = _mm256_setzero_ps();
 

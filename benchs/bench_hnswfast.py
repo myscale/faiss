@@ -20,7 +20,7 @@ subset = rs.choice([i for i in range(len(xb))], 900, replace=False).astype("int6
 print('id select(subset) size {}'.format(len(subset)))
 
 hnswfast_index.hnsw.efConstruction = 64
-hnswfast_index.hnsw.efSearch = 64
+hnswfast_index.hnsw.efSearch = 64 * 2
 flat_index.add(xb)
 start = time.time()
 D_flat, I_flat = flat_index.search(xq, k)
@@ -75,10 +75,10 @@ def test_faiss_hnsw():
     print('hnsw recall {}'.format(hnsw_recall))
 test_faiss_hnsw()
 # hnswfast
-def test_hnswfast():
+def test_hnswfast(hnswfast_index_):
     faiss.omp_set_num_threads(1)
     start = time.time()
-    D_hnswfast, I_hnswfast = hnswfast_index.search(xq, k)
+    D_hnswfast, I_hnswfast = hnswfast_index_.search(xq, k)
     end = time.time()
     print('hnsw fast time: {}'.format(end - start))
 
@@ -89,7 +89,11 @@ def test_hnswfast():
 
     hnswfast_recall = float(hnswfast_recall)/(k*test_number)
     print('hnswfast recall {}'.format(hnswfast_recall))
-#test_hnswfast()
+
+test_hnswfast(hnswfast_index)
+faiss.write_index(hnswfast_index, '/tmp/hnswfast')
+load_hnswfast_index = faiss.read_index('/tmp/hnswfast')
+test_hnswfast(load_hnswfast_index)
 exit(0)
 
 # hnswfast sq

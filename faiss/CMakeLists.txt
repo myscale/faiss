@@ -206,6 +206,7 @@ endif()
 set(FAISS_HEADERS ${FAISS_HEADERS} PARENT_SCOPE)
 
 add_library(faiss ${FAISS_SRC})
+target_compile_options(faiss PRIVATE -mavx2 -mfma -mf16c -mpopcnt)
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2")
