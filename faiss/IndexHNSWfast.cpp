@@ -1,42 +1,51 @@
 #include <faiss/IndexHNSWfast.h>
 
-#include <cstdlib>
-#include <cassert>
-#include <cstring>
-#include <cstdio>
-#include <cmath>
 #include <omp.h>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
-#include <unordered_set>
 #include <queue>
+#include <unordered_set>
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <stdint.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #ifdef __SSE__
 #endif
 
-#include <faiss/utils/distances.h>
-#include <faiss/utils/random.h>
-#include <faiss/utils/Heap.h>
-#include <faiss/impl/FaissAssert.h>
+#include <faiss/Index2Layer.h>
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexIVFPQ.h>
-#include <faiss/Index2Layer.h>
 #include <faiss/impl/AuxIndexStructures.h>
+#include <faiss/impl/FaissAssert.h>
+#include <faiss/utils/Heap.h>
+#include <faiss/utils/distances.h>
+#include <faiss/utils/random.h>
 #include <iostream>
 
 extern "C" {
 
 /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-int sgemm_ (const char *transa, const char *transb, FINTEGER *m, FINTEGER *
-n, FINTEGER *k, const float *alpha, const float *a,
-            FINTEGER *lda, const float *b, FINTEGER *
-ldb, float *beta, float *c, FINTEGER *ldc);
-
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
 }
 
 namespace faiss {
@@ -52,89 +61,85 @@ using NodeDistFarther = HNSWfast::NodeDistFarther;
 
 namespace {
 
-
 /* Wrap the distance computer into one that negates the
    distances. This makes supporting INNER_PRODUCE search easier */
 
-struct NegativeDistanceComputer: DistanceComputer {
-
+struct NegativeDistanceComputer : DistanceComputer {
     /// owned by this
-    DistanceComputer *basedis;
+    DistanceComputer* basedis;
 
-    explicit NegativeDistanceComputer(DistanceComputer *basedis):
-            basedis(basedis)
-    {}
+    explicit NegativeDistanceComputer(DistanceComputer* basedis)
+            : basedis(basedis) {}
 
-    void set_query(const float *x) override {
+    void set_query(const float* x) override {
         basedis->set_query(x);
     }
 
     /// compute distance of vector i to current query
-    float operator () (idx_t i) override {
+    float operator()(idx_t i) override {
         return -(*basedis)(i);
     }
 
     /// compute distance between two stored vectors
-    float symmetric_dis (idx_t i, idx_t j) override {
+    float symmetric_dis(idx_t i, idx_t j) override {
         return -basedis->symmetric_dis(i, j);
     }
 
-    virtual ~NegativeDistanceComputer ()
-    {
+    virtual ~NegativeDistanceComputer() {
         delete basedis;
     }
-
 };
 
-DistanceComputer *storage_distance_computer(const Index *storage)
-{
+DistanceComputer* storage_distance_computer(const Index* storage) {
     if (storage->metric_type == METRIC_INNER_PRODUCT) {
         return new NegativeDistanceComputer(storage->get_distance_computer());
-    } else{
+    } else {
         return storage->get_distance_computer();
     }
 }
 
-void hnsw_add_vertices(IndexHNSWfast &index_hnsw,
-                       size_t n0,
-                       size_t n, const float *x,
-                       bool verbose,
-                       bool preset_levels = false) {
+void hnsw_add_vertices(
+        IndexHNSWfast& index_hnsw,
+        size_t n0,
+        size_t n,
+        const float* x,
+        bool verbose,
+        bool preset_levels = false) {
     size_t d = index_hnsw.d;
-    HNSWfast & hnsw = index_hnsw.hnsw;
+    HNSWfast& hnsw = index_hnsw.hnsw;
     size_t ntotal = n0 + n;
     double t0 = getmillisecs();
     if (verbose) {
         printf("hnsw_add_vertices: adding %ld elements on top of %ld "
                "(preset_levels=%d)\n",
-               n, n0, int(preset_levels));
+               n,
+               n0,
+               int(preset_levels));
     }
 
     if (n == 0) {
         return;
     }
 
-    //int max_level = hnsw.prepare_level_tab(n, preset_levels);
+    // int max_level = hnsw.prepare_level_tab(n, preset_levels);
     int max_level = hnsw.max_level;
 
     if (verbose) {
         printf("  max_level = %d\n", max_level);
     }
 
-
     { // perform add
         auto tas = getmillisecs();
-        DistanceComputer *dis0 =
-                storage_distance_computer (index_hnsw.storage);
+        DistanceComputer* dis0 = storage_distance_computer(index_hnsw.storage);
         ScopeDeleter1<DistanceComputer> del0(dis0);
 
         dis0->set_query(x);
         hnsw.addPoint(*dis0, hnsw.levels[n0], n0);
 
 #pragma omp parallel for
-        for (int i = 1; i < n; ++ i) {
-            DistanceComputer *dis =
-                    storage_distance_computer (index_hnsw.storage);
+        for (int i = 1; i < n; ++i) {
+            DistanceComputer* dis =
+                    storage_distance_computer(index_hnsw.storage);
             ScopeDeleter1<DistanceComputer> del(dis);
             dis->set_query(x + i * d);
             hnsw.addPoint(*dis, hnsw.levels[n0 + i], i + n0);
@@ -143,33 +148,27 @@ void hnsw_add_vertices(IndexHNSWfast &index_hnsw,
     if (verbose) {
         printf("Done in %.3f ms\n", getmillisecs() - t0);
     }
-
 }
 
-}  // namespace
-
-
-
+} // namespace
 
 /**************************************************************
  * IndexHNSWfast implementation
  **************************************************************/
 
-IndexHNSWfast::IndexHNSWfast(int d, int M, MetricType metric):
-        Index(d, metric),
-        hnsw(M),
-        own_fields(false),
-        storage(nullptr),
-        reconstruct_from_neighbors(nullptr)
-{}
+IndexHNSWfast::IndexHNSWfast(int d, int M, MetricType metric)
+        : Index(d, metric),
+          hnsw(M),
+          own_fields(false),
+          storage(nullptr),
+          reconstruct_from_neighbors(nullptr) {}
 
-IndexHNSWfast::IndexHNSWfast(Index *storage, int M):
-        Index(storage->d, storage->metric_type),
-        hnsw(M),
-        own_fields(false),
-        storage(storage),
-        reconstruct_from_neighbors(nullptr)
-{}
+IndexHNSWfast::IndexHNSWfast(Index* storage, int M)
+        : Index(storage->d, storage->metric_type),
+          hnsw(M),
+          own_fields(false),
+          storage(storage),
+          reconstruct_from_neighbors(nullptr) {}
 
 IndexHNSWfast::~IndexHNSWfast() {
     if (own_fields) {
@@ -185,29 +184,36 @@ void IndexHNSWfast::init_hnsw() {
     hnsw.init(ntotal);
 }
 
-void
-IndexHNSWfast::get_sorted_access_counts(std::vector<size_t> &ret, size_t &tot) {
+void IndexHNSWfast::get_sorted_access_counts(
+        std::vector<size_t>& ret,
+        size_t& tot) {
     return;
 }
 
-void IndexHNSWfast::train(idx_t n, const float* x)
-{
-    FAISS_THROW_IF_NOT_MSG(storage,
-                           "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
+void IndexHNSWfast::train(idx_t n, const float* x) {
+    FAISS_THROW_IF_NOT_MSG(
+            storage,
+            "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
     // hnsw structure does not require training
-    storage->train (n, x);
+    storage->train(n, x);
     is_trained = true;
 }
 
-void IndexHNSWfast::search (idx_t n, const float *x, idx_t k,
-                         float *distances, idx_t *labels, const SearchParameters* params_in) const
+void IndexHNSWfast::search(
+        idx_t n,
+        const float* x,
+        idx_t k,
+        float* distances,
+        idx_t* labels,
+        const SearchParameters* params_in) const
 
 {
-    FAISS_THROW_IF_NOT_MSG(storage,
-                           "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
+    FAISS_THROW_IF_NOT_MSG(
+            storage,
+            "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
     size_t nreorder = 0;
 
-    idx_t check_period = InterruptCallback::get_period_hint (
+    idx_t check_period = InterruptCallback::get_period_hint(
             hnsw.max_level * d * hnsw.efSearch);
 
     for (idx_t i0 = 0; i0 < n; i0 += check_period) {
@@ -215,36 +221,39 @@ void IndexHNSWfast::search (idx_t n, const float *x, idx_t k,
 
 #pragma omp parallel reduction(+ : nreorder)
         {
-
-            DistanceComputer *dis = storage_distance_computer(storage);
+            DistanceComputer* dis = storage_distance_computer(storage);
             ScopeDeleter1<DistanceComputer> del(dis);
 
 #pragma omp for
-            for(idx_t i = i0; i < i1; i++) {
-                idx_t * idxi = labels + i * k;
-                float * simi = distances + i * k;
+            for (idx_t i = i0; i < i1; i++) {
+                idx_t* idxi = labels + i * k;
+                float* simi = distances + i * k;
                 dis->set_query(x + i * d);
 
-                hnsw.searchKnn(*dis, k, idxi, simi, 
-                    dynamic_cast<const SearchParametersHNSW*>(params_in));
+                hnsw.searchKnn(
+                        *dis,
+                        k,
+                        idxi,
+                        simi,
+                        dynamic_cast<const SearchParametersHNSW*>(params_in));
 
                 if (reconstruct_from_neighbors &&
                     reconstruct_from_neighbors->k_reorder != 0) {
                     int k_reorder = reconstruct_from_neighbors->k_reorder;
-                    if (k_reorder == -1 || k_reorder > k) k_reorder = k;
+                    if (k_reorder == -1 || k_reorder > k)
+                        k_reorder = k;
 
                     nreorder += reconstruct_from_neighbors->compute_distances(
                             k_reorder, idxi, x + i * d, simi);
 
                     // sort top k_reorder
-                    maxheap_heapify (k_reorder, simi, idxi, simi, idxi, k_reorder);
-                    maxheap_reorder (k_reorder, simi, idxi);
+                    maxheap_heapify(
+                            k_reorder, simi, idxi, simi, idxi, k_reorder);
+                    maxheap_reorder(k_reorder, simi, idxi);
                 }
-
             }
-
         }
-        InterruptCallback::check ();
+        InterruptCallback::check();
     }
 
     if (metric_type == METRIC_INNER_PRODUCT) {
@@ -255,36 +264,32 @@ void IndexHNSWfast::search (idx_t n, const float *x, idx_t k,
     }
 }
 
-
-void IndexHNSWfast::add(idx_t n, const float *x)
-{
-    FAISS_THROW_IF_NOT_MSG(storage,
-                           "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
+void IndexHNSWfast::add(idx_t n, const float* x) {
+    FAISS_THROW_IF_NOT_MSG(
+            storage,
+            "Please use IndexHNSWfastFlat (or variants) instead of IndexHNSWfast directly");
     FAISS_THROW_IF_NOT(is_trained);
     int n0 = ntotal;
 
     storage->add(n, x);
     ntotal = storage->ntotal;
 
-    hnsw_add_vertices (*this, n0, n, x, verbose,
-                       hnsw.levels.size() == ntotal);
+    hnsw_add_vertices(*this, n0, n, x, verbose, hnsw.levels.size() == ntotal);
 }
 
-void IndexHNSWfast::reset()
-{
+void IndexHNSWfast::reset() {
     hnsw.reset();
     storage->reset();
     ntotal = 0;
 }
 
-void IndexHNSWfast::reconstruct (idx_t key, float* recons) const
-{
+void IndexHNSWfast::reconstruct(idx_t key, float* recons) const {
     storage->reconstruct(key, recons);
 }
 
 size_t IndexHNSWfast::remove_ids(const IDSelector& sel) {
     size_t nremove = 0;
-    for(idx_t i = 0; i < ntotal; i++){
+    for (idx_t i = 0; i < ntotal; i++) {
         if (sel.is_member(i)) {
             nremove++;
         }
@@ -299,8 +304,10 @@ size_t IndexHNSWfast::remove_ids(const IDSelector& sel) {
  **************************************************************/
 
 ReconstructFromNeighbors2::ReconstructFromNeighbors2(
-        const IndexHNSWfast & index, size_t k, size_t nsq):
-        index(index), k(k), nsq(nsq) {
+        const IndexHNSWfast& index,
+        size_t k,
+        size_t nsq)
+        : index(index), k(k), nsq(nsq) {
     M = index.hnsw.M << 1;
     FAISS_ASSERT(k <= 256);
     code_size = k == 1 ? 0 : nsq;
@@ -311,17 +318,17 @@ ReconstructFromNeighbors2::ReconstructFromNeighbors2(
     k_reorder = -1;
 }
 
-void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tmp) const
-{
-
-
-    const HNSWfast & hnsw = index.hnsw;
-    int *cur_links = hnsw.get_neighbor_link(i, 0);
-    int *cur_neighbors = cur_links + 1;
+void ReconstructFromNeighbors2::reconstruct(
+        storage_idx_t i,
+        float* x,
+        float* tmp) const {
+    const HNSWfast& hnsw = index.hnsw;
+    int* cur_links = hnsw.get_neighbor_link(i, 0);
+    int* cur_neighbors = cur_links + 1;
     auto cur_neighbor_num = hnsw.get_neighbors_num(cur_links);
 
     if (k == 1 || nsq == 1) {
-        const float * beta;
+        const float* beta;
         if (k == 1) {
             beta = codebook.data();
         } else {
@@ -335,10 +342,10 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
         for (int l = 0; l < d; l++)
             x[l] = w0 * tmp[l];
 
-        for (auto j = 0; j < cur_neighbor_num; ++ j) {
-
+        for (auto j = 0; j < cur_neighbor_num; ++j) {
             storage_idx_t ji = cur_neighbors[j];
-            if (ji < 0) ji = i;
+            if (ji < 0)
+                ji = i;
             float w = beta[j + 1];
             index.storage->reconstruct(ji, tmp);
             for (int l = 0; l < d; l++)
@@ -348,8 +355,8 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
         int idx0 = codes[2 * i];
         int idx1 = codes[2 * i + 1];
 
-        const float *beta0 = codebook.data() +  idx0 * (M + 1);
-        const float *beta1 = codebook.data() + (idx1 + k) * (M + 1);
+        const float* beta0 = codebook.data() + idx0 * (M + 1);
+        const float* beta1 = codebook.data() + (idx1 + k) * (M + 1);
 
         index.storage->reconstruct(i, tmp);
 
@@ -363,9 +370,10 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
         for (int l = dsub; l < d; l++)
             x[l] = w0 * tmp[l];
 
-        for (auto j = 0; j < cur_neighbor_num; ++ j) {
+        for (auto j = 0; j < cur_neighbor_num; ++j) {
             storage_idx_t ji = cur_neighbors[j];
-            if (ji < 0) ji = i;
+            if (ji < 0)
+                ji = i;
             index.storage->reconstruct(ji, tmp);
             float w;
             w = beta0[j + 1];
@@ -377,10 +385,10 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
                 x[l] += w * tmp[l];
         }
     } else {
-        const float *betas[nsq];
+        const float* betas[nsq];
         {
-            const float *b = codebook.data();
-            const uint8_t *c = &codes[i * code_size];
+            const float* b = codebook.data();
+            const uint8_t* c = &codes[i * code_size];
             for (int sq = 0; sq < nsq; sq++) {
                 betas[sq] = b + (*c++) * (M + 1);
                 b += (M + 1) * k;
@@ -400,9 +408,10 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
             }
         }
 
-        for (auto j = 0; j < cur_neighbor_num; ++ j) {
+        for (auto j = 0; j < cur_neighbor_num; ++j) {
             storage_idx_t ji = cur_neighbors[j];
-            if (ji < 0) ji = i;
+            if (ji < 0)
+                ji = i;
 
             index.storage->reconstruct(ji, tmp);
             int d0 = 0;
@@ -418,10 +427,10 @@ void ReconstructFromNeighbors2::reconstruct(storage_idx_t i, float *x, float *tm
     }
 }
 
-void ReconstructFromNeighbors2::reconstruct_n(storage_idx_t n0,
-                                              storage_idx_t ni,
-                                              float *x) const
-{
+void ReconstructFromNeighbors2::reconstruct_n(
+        storage_idx_t n0,
+        storage_idx_t ni,
+        float* x) const {
 #pragma omp parallel
     {
         std::vector<float> tmp(index.d);
@@ -433,13 +442,15 @@ void ReconstructFromNeighbors2::reconstruct_n(storage_idx_t n0,
 }
 
 size_t ReconstructFromNeighbors2::compute_distances(
-        size_t n, const idx_t *shortlist,
-        const float *query, float *distances) const
-{
+        size_t n,
+        const idx_t* shortlist,
+        const float* query,
+        float* distances) const {
     std::vector<float> tmp(2 * index.d);
     size_t ncomp = 0;
     for (int i = 0; i < n; i++) {
-        if (shortlist[i] < 0) break;
+        if (shortlist[i] < 0)
+            break;
         reconstruct(shortlist[i], tmp.data(), tmp.data() + index.d);
         distances[i] = fvec_L2sqr(query, tmp.data(), index.d);
         ncomp++;
@@ -447,37 +458,36 @@ size_t ReconstructFromNeighbors2::compute_distances(
     return ncomp;
 }
 
-void ReconstructFromNeighbors2::get_neighbor_table(storage_idx_t i, float *tmp1) const
-{
-    const HNSWfast & hnsw = index.hnsw;
-    int *cur_links = hnsw.get_neighbor_link(i, 0);
-    int *cur_neighbors = cur_links + 1;
+void ReconstructFromNeighbors2::get_neighbor_table(storage_idx_t i, float* tmp1)
+        const {
+    const HNSWfast& hnsw = index.hnsw;
+    int* cur_links = hnsw.get_neighbor_link(i, 0);
+    int* cur_neighbors = cur_links + 1;
     auto cur_neighbor_num = hnsw.get_neighbors_num(cur_links);
     size_t d = index.d;
 
     index.storage->reconstruct(i, tmp1);
 
-    for (auto j = 0; j < cur_neighbor_num; ++ j) {
+    for (auto j = 0; j < cur_neighbor_num; ++j) {
         storage_idx_t ji = cur_neighbors[j];
-        if (ji < 0) ji = i;
+        if (ji < 0)
+            ji = i;
         index.storage->reconstruct(ji, tmp1 + (j + 1) * d);
     }
-
 }
-
 
 /// called by add_codes
 void ReconstructFromNeighbors2::estimate_code(
-        const float *x, storage_idx_t i, uint8_t *code) const
-{
-
+        const float* x,
+        storage_idx_t i,
+        uint8_t* code) const {
     // fill in tmp table with the neighbor values
-    float *tmp1 = new float[d * (M + 1) + (d * k)];
-    float *tmp2 = tmp1 + d * (M + 1);
+    float* tmp1 = new float[d * (M + 1) + (d * k)];
+    float* tmp2 = tmp1 + d * (M + 1);
     ScopeDeleter<float> del(tmp1);
 
     // collect coordinates of base
-    get_neighbor_table (i, tmp1);
+    get_neighbor_table(i, tmp1);
 
     for (size_t sq = 0; sq < nsq; sq++) {
         int d0 = sq * dsub;
@@ -487,10 +497,19 @@ void ReconstructFromNeighbors2::estimate_code(
             FINTEGER dsubi = dsub;
             float zero = 0, one = 1;
 
-            sgemm_ ("N", "N", &dsubi, &ki, &m1, &one,
-                    tmp1 + d0, &di,
-                    codebook.data() + sq * (m1 * k), &m1,
-                    &zero, tmp2, &dsubi);
+            sgemm_("N",
+                   "N",
+                   &dsubi,
+                   &ki,
+                   &m1,
+                   &one,
+                   tmp1 + d0,
+                   &di,
+                   codebook.data() + sq * (m1 * k),
+                   &m1,
+                   &zero,
+                   tmp2,
+                   &dsubi);
         }
 
         float min = HUGE_VAL;
@@ -504,11 +523,9 @@ void ReconstructFromNeighbors2::estimate_code(
         }
         code[sq] = argmin;
     }
-
 }
 
-void ReconstructFromNeighbors2::add_codes(size_t n, const float *x)
-{
+void ReconstructFromNeighbors2::add_codes(size_t n, const float* x) {
     if (k == 1) { // nothing to encode
         ntotal += n;
         return;
@@ -516,96 +533,98 @@ void ReconstructFromNeighbors2::add_codes(size_t n, const float *x)
     codes.resize(codes.size() + code_size * n);
 #pragma omp parallel for
     for (int i = 0; i < n; i++) {
-        estimate_code(x + i * index.d, ntotal + i,
-                      codes.data() + (ntotal + i) * code_size);
+        estimate_code(
+                x + i * index.d,
+                ntotal + i,
+                codes.data() + (ntotal + i) * code_size);
     }
     ntotal += n;
-    FAISS_ASSERT (codes.size() == ntotal * code_size);
+    FAISS_ASSERT(codes.size() == ntotal * code_size);
 }
-
 
 /**************************************************************
  * IndexHNSWfastFlat implementation
  **************************************************************/
 
-
-IndexHNSWfastFlat::IndexHNSWfastFlat()
-{
+IndexHNSWfastFlat::IndexHNSWfastFlat() {
     is_trained = true;
 }
 
-IndexHNSWfastFlat::IndexHNSWfastFlat(int d, int M, MetricType metric):
-        IndexHNSWfast(new IndexFlat(d, metric), M)
-{
+IndexHNSWfastFlat::IndexHNSWfastFlat(int d, int M, MetricType metric)
+        : IndexHNSWfast(new IndexFlat(d, metric), M) {
     own_fields = true;
     is_trained = true;
 }
-
 
 /**************************************************************
  * IndexHNSWfastPQ implementation
  **************************************************************/
 
-
 IndexHNSWfastPQ::IndexHNSWfastPQ() {}
 
-IndexHNSWfastPQ::IndexHNSWfastPQ(int d, int pq_m,int bit_size, int M, MetricType metric):
-        IndexHNSWfast(new IndexPQ(d, pq_m, bit_size, metric), M)
-{
+IndexHNSWfastPQ::IndexHNSWfastPQ(
+        int d,
+        int pq_m,
+        int bit_size,
+        int M,
+        MetricType metric)
+        : IndexHNSWfast(new IndexPQ(d, pq_m, bit_size, metric), M) {
     own_fields = true;
     is_trained = false;
 }
 
-void IndexHNSWfastPQ::train(idx_t n, const float* x)
-{
-    IndexHNSWfast::train (n, x);
-    (dynamic_cast<IndexPQ*> (storage))->pq.compute_sdc_table();
+void IndexHNSWfastPQ::train(idx_t n, const float* x) {
+    IndexHNSWfast::train(n, x);
+    (dynamic_cast<IndexPQ*>(storage))->pq.compute_sdc_table();
 }
 
 /**************************************************************
  * IndexHNSWfastSQ implementation
  **************************************************************/
 
-
-IndexHNSWfastSQ::IndexHNSWfastSQ(int d, ScalarQuantizer::QuantizerType qtype, int M,
-                           MetricType metric):
-        IndexHNSWfast (new IndexScalarQuantizer (d, qtype, metric), M)
-{
+IndexHNSWfastSQ::IndexHNSWfastSQ(
+        int d,
+        ScalarQuantizer::QuantizerType qtype,
+        int M,
+        MetricType metric)
+        : IndexHNSWfast(new IndexScalarQuantizer(d, qtype, metric), M) {
     own_fields = true;
     is_trained = false;
 }
 
 IndexHNSWfastSQ::IndexHNSWfastSQ() {}
 
-
 /**************************************************************
  * IndexHNSWfast2Level implementation
  **************************************************************/
 
-
-IndexHNSWfast2Level::IndexHNSWfast2Level(Index *quantizer, size_t nlist, int m_pq, int M):
-        IndexHNSWfast (new Index2Layer (quantizer, nlist, m_pq), M)
-{
+IndexHNSWfast2Level::IndexHNSWfast2Level(
+        Index* quantizer,
+        size_t nlist,
+        int m_pq,
+        int M)
+        : IndexHNSWfast(new Index2Layer(quantizer, nlist, m_pq), M) {
     own_fields = true;
     is_trained = false;
 }
 
 IndexHNSWfast2Level::IndexHNSWfast2Level() = default;
 
-
 namespace {
-
 
 // same as search_from_candidates but uses v
 // visno -> is in result list
 // visno + 1 -> in result list + in candidates
-int search_from_candidates_2(const HNSWfast & hnsw,
-                             DistanceComputer & qdis, int k,
-                             idx_t *I, float * D,
-                             MinimaxHeap &candidates,
-                             VisitedList &vt,
-                             int level, int nres_in = 0)
-{
+int search_from_candidates_2(
+        const HNSWfast& hnsw,
+        DistanceComputer& qdis,
+        int k,
+        idx_t* I,
+        float* D,
+        MinimaxHeap& candidates,
+        VisitedList& vt,
+        int level,
+        int nres_in = 0) {
     int nres = nres_in;
     int ndis = 0;
     for (int i = 0; i < candidates.size(); i++) {
@@ -620,13 +639,14 @@ int search_from_candidates_2(const HNSWfast & hnsw,
         float d0 = 0;
         int v0 = candidates.pop_min(&d0);
 
-        int *cur_links = hnsw.get_neighbor_link(v0, level);
-        int *cur_neighbors = cur_links + 1;
+        int* cur_links = hnsw.get_neighbor_link(v0, level);
+        int* cur_neighbors = cur_links + 1;
         auto cur_neighbor_num = hnsw.get_neighbors_num(cur_links);
 
-        for (auto j = 0; j < cur_neighbor_num; ++ j) {
+        for (auto j = 0; j < cur_neighbor_num; ++j) {
             int v1 = cur_neighbors[j];
-            if (v1 < 0) break;
+            if (v1 < 0)
+                break;
             if (vt.mass[v1] == vt.curV + 1) {
                 // nothing to do
             } else {
@@ -637,10 +657,10 @@ int search_from_candidates_2(const HNSWfast & hnsw,
                 // never seen before --> add to heap
                 if (vt.mass[v1] < vt.curV) {
                     if (nres < k) {
-                        faiss::maxheap_push (++nres, D, I, d, v1);
+                        faiss::maxheap_push(++nres, D, I, d, v1);
                     } else if (d < D[0]) {
-                        faiss::maxheap_pop (nres--, D, I);
-                        faiss::maxheap_push (++nres, D, I, d, v1);
+                        faiss::maxheap_pop(nres--, D, I);
+                        faiss::maxheap_push(++nres, D, I, d, v1);
                     }
                 }
                 vt.mass[v1] = vt.curV + 1;
@@ -655,18 +675,21 @@ int search_from_candidates_2(const HNSWfast & hnsw,
     return nres;
 }
 
+} // namespace
 
-}  // namespace
-
-void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
-                               float *distances, idx_t *labels, const SearchParameters* param) const
-{
+void IndexHNSWfast2Level::search(
+        idx_t n,
+        const float* x,
+        idx_t k,
+        float* distances,
+        idx_t* labels,
+        const SearchParameters* param) const {
     if (dynamic_cast<const Index2Layer*>(storage)) {
-        IndexHNSWfast::search (n, x, k, distances, labels, param);
+        IndexHNSWfast::search(n, x, k, distances, labels, param);
 
     } else { // "mixed" search
 
-        const IndexIVFPQ *index_ivfpq =
+        const IndexIVFPQ* index_ivfpq =
                 dynamic_cast<const IndexIVFPQ*>(storage);
 
         int nprobe = index_ivfpq->nprobe;
@@ -674,38 +697,45 @@ void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
         std::unique_ptr<idx_t[]> coarse_assign(new idx_t[n * nprobe]);
         std::unique_ptr<float[]> coarse_dis(new float[n * nprobe]);
 
-        index_ivfpq->quantizer->search (n, x, nprobe, coarse_dis.get(),
-                                        coarse_assign.get());
+        index_ivfpq->quantizer->search(
+                n, x, nprobe, coarse_dis.get(), coarse_assign.get());
 
-        index_ivfpq->search_preassigned (n, x, k, coarse_assign.get(),
-                                         coarse_dis.get(), distances, labels,
-                                         false);
+        index_ivfpq->search_preassigned(
+                n,
+                x,
+                k,
+                coarse_assign.get(),
+                coarse_dis.get(),
+                distances,
+                labels,
+                false);
 
 #pragma omp parallel
         {
-            VisitedList vt (ntotal);
-            DistanceComputer *dis = storage_distance_computer(storage);
+            VisitedList vt(ntotal);
+            DistanceComputer* dis = storage_distance_computer(storage);
             ScopeDeleter1<DistanceComputer> del(dis);
 
             const int candidates_size = 1;
             MinimaxHeap candidates(candidates_size);
 
 #pragma omp for
-            for(idx_t i = 0; i < n; i++) {
-                idx_t * idxi = labels + i * k;
-                float * simi = distances + i * k;
+            for (idx_t i = 0; i < n; i++) {
+                idx_t* idxi = labels + i * k;
+                float* simi = distances + i * k;
                 dis->set_query(x + i * d);
 
                 // mark all inverted list elements as visited
 
                 for (int j = 0; j < nprobe; j++) {
                     idx_t key = coarse_assign[j + i * nprobe];
-                    if (key < 0) break;
-                    size_t list_length = index_ivfpq->get_list_size (key);
-                    const idx_t * ids = index_ivfpq->invlists->get_ids (key);
+                    if (key < 0)
+                        break;
+                    size_t list_length = index_ivfpq->get_list_size(key);
+                    const idx_t* ids = index_ivfpq->invlists->get_ids(key);
 
                     for (int jj = 0; jj < list_length; jj++) {
-                        vt.set (ids[jj]);
+                        vt.set(ids[jj]);
                     }
                 }
 
@@ -715,71 +745,68 @@ void IndexHNSWfast2Level::search (idx_t n, const float *x, idx_t k,
                 int search_policy = 2;
 
                 if (search_policy == 1) {
-
-                    for (int j = 0 ; j < candidates_size && j < k; j++) {
-                        if (idxi[j] < 0) break;
-                        candidates.push (idxi[j], simi[j]);
+                    for (int j = 0; j < candidates_size && j < k; j++) {
+                        if (idxi[j] < 0)
+                            break;
+                        candidates.push(idxi[j], simi[j]);
                         // search_from_candidates adds them back
                         idxi[j] = -1;
                         simi[j] = HUGE_VAL;
                     }
 
                     // reorder from sorted to heap
-                    maxheap_heapify (k, simi, idxi, simi, idxi, k);
+                    maxheap_heapify(k, simi, idxi, simi, idxi, k);
 
                     // removed from HNSWfast, but still available in HNSW
-//                    hnsw.search_from_candidates(
-//                      *dis, k, idxi, simi,
-//                      candidates, vt, 0, k
-//                    );
+                    //                    hnsw.search_from_candidates(
+                    //                      *dis, k, idxi, simi,
+                    //                      candidates, vt, 0, k
+                    //                    );
 
                     vt.advance();
 
                 } else if (search_policy == 2) {
-
-                    for (int j = 0 ; j < candidates_size && j < k; j++) {
-                        if (idxi[j] < 0) break;
-                        candidates.push (idxi[j], simi[j]);
+                    for (int j = 0; j < candidates_size && j < k; j++) {
+                        if (idxi[j] < 0)
+                            break;
+                        candidates.push(idxi[j], simi[j]);
                     }
 
                     // reorder from sorted to heap
-                    maxheap_heapify (k, simi, idxi, simi, idxi, k);
+                    maxheap_heapify(k, simi, idxi, simi, idxi, k);
 
-                    search_from_candidates_2 (
-                            hnsw, *dis, k, idxi, simi,
-                            candidates, vt, 0, k);
-                    vt.advance ();
-                    vt.advance ();
-
+                    search_from_candidates_2(
+                            hnsw, *dis, k, idxi, simi, candidates, vt, 0, k);
+                    vt.advance();
+                    vt.advance();
                 }
 
-                maxheap_reorder (k, simi, idxi);
+                maxheap_reorder(k, simi, idxi);
             }
         }
     }
 }
 
-void IndexHNSWfast2Level::flip_to_ivf ()
-{
-    Index2Layer *storage2l =
-            dynamic_cast<Index2Layer*>(storage);
+void IndexHNSWfast2Level::flip_to_ivf() {
+    Index2Layer* storage2l = dynamic_cast<Index2Layer*>(storage);
 
-    FAISS_THROW_IF_NOT (storage2l);
+    FAISS_THROW_IF_NOT(storage2l);
 
-    IndexIVFPQ * index_ivfpq =
-            new IndexIVFPQ (storage2l->q1.quantizer,
-                            d, storage2l->q1.nlist,
-                            storage2l->pq.M, 8);
+    IndexIVFPQ* index_ivfpq = new IndexIVFPQ(
+            storage2l->q1.quantizer,
+            d,
+            storage2l->q1.nlist,
+            storage2l->pq.M,
+            8);
     index_ivfpq->pq = storage2l->pq;
     index_ivfpq->is_trained = storage2l->is_trained;
     index_ivfpq->precompute_table();
     index_ivfpq->own_fields = storage2l->q1.own_fields;
     storage2l->transfer_to_IVFPQ(*index_ivfpq);
-    index_ivfpq->make_direct_map (true);
+    index_ivfpq->make_direct_map(true);
 
     storage = index_ivfpq;
     delete storage2l;
-
 }
 
-}
+} // namespace faiss

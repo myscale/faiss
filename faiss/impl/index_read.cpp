@@ -382,24 +382,27 @@ static void read_HNSW_fast(HNSWfast* hnswf, IOReader* f) {
     READ1(hnswf->has_deletion);
     READ1(hnswf->level_constant);
 
-    READVECTOR (hnswf->levels);
+    READVECTOR(hnswf->levels);
     auto ntotal = hnswf->levels.size();
     hnswf->loaded = true;
 
     hnswf->level_generator.seed(100);
-    if (hnswf->visited_list_pool) delete hnswf->visited_list_pool;
+    if (hnswf->visited_list_pool)
+        delete hnswf->visited_list_pool;
     hnswf->visited_list_pool = new VisitedListPool(1, ntotal);
     hnswf->init_link_list_lock(hnswf->levels.size());
 
     hnswf->level_stats = std::vector<int>(hnswf->max_level + 1, 0);
-    hnswf->level0_links = (char*) malloc(ntotal * hnswf->level0_link_size);
+    hnswf->level0_links = (char*)malloc(ntotal * hnswf->level0_link_size);
     READANDCHECK(hnswf->level0_links, ntotal * hnswf->level0_link_size);
-    hnswf->linkLists = (char**) malloc(ntotal * sizeof(void*));
+    hnswf->linkLists = (char**)malloc(ntotal * sizeof(void*));
     for (auto i = 0; i < ntotal; ++i) {
         if (hnswf->levels[i]) {
-            hnswf->linkLists[i] = (char*)malloc(hnswf->link_size * hnswf->levels[i]);
-            READANDCHECK(hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
-            hnswf->level_stats[hnswf->levels[i]] ++;
+            hnswf->linkLists[i] =
+                    (char*)malloc(hnswf->link_size * hnswf->levels[i]);
+            READANDCHECK(
+                    hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
+            hnswf->level_stats[hnswf->levels[i]]++;
         } else {
             hnswf->level_stats[0]++;
         }
@@ -976,7 +979,7 @@ Index* read_index(IOReader* f, int io_flags) {
             dynamic_cast<IndexPQ*>(idxhnsw->storage)->pq.compute_sdc_table();
         }
         idx = idxhnsw;
-    } else if(
+    } else if (
             h == fourcc("IHFf") || h == fourcc("IHFp") || h == fourcc("IHFs") ||
             h == fourcc("IHF2")) {
         IndexHNSWfast* idxhnswfast = nullptr;
@@ -993,7 +996,8 @@ Index* read_index(IOReader* f, int io_flags) {
         idxhnswfast->storage = read_index(f, io_flags);
         idxhnswfast->own_fields = true;
         if (h == fourcc("IHFp")) {
-            dynamic_cast<IndexPQ*>(idxhnswfast->storage)->pq.compute_sdc_table();
+            dynamic_cast<IndexPQ*>(idxhnswfast->storage)
+                    ->pq.compute_sdc_table();
         }
         idx = idxhnswfast;
     } else if (

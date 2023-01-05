@@ -10,7 +10,6 @@
 
 namespace faiss {
 
-
 /**************************************************************
  * hnsw structure implementation
  **************************************************************/
@@ -31,7 +30,8 @@ HNSWfast::HNSWfast(int M) : M(M), rng(100) {
 
 void HNSWfast::init(int ntotal) {
     level_generator.seed(100);
-    if (visited_list_pool) delete visited_list_pool;
+    if (visited_list_pool)
+        delete visited_list_pool;
     visited_list_pool = new VisitedListPool(1, ntotal);
     std::vector<std::mutex>(ntotal).swap(link_list_locks);
 
@@ -41,32 +41,32 @@ void HNSWfast::init(int ntotal) {
         levels[i] = pt_level;
     }
 
-    level0_links = (char *) malloc(level0_link_size * ntotal);
+    level0_links = (char*)malloc(level0_link_size * ntotal);
     if (level0_links == nullptr)
         throw std::runtime_error("No enough memory 4 level0_links!");
-    memset(level0_links,0,ntotal * level0_link_size);
+    memset(level0_links, 0, ntotal * level0_link_size);
 
-    linkLists = (char **) malloc(sizeof(void *) * ntotal);
+    linkLists = (char**)malloc(sizeof(void*) * ntotal);
     if (linkLists == nullptr)
         throw std::runtime_error("No enough memory 4 level0_links_new!");
-    memset(linkLists,0,ntotal * sizeof(void *));
+    memset(linkLists, 0, ntotal * sizeof(void*));
 
     for (int i = 0; i < ntotal; i++) {
         int pt_level = levels[i];
-        if (pt_level > max_level) max_level = pt_level;
+        if (pt_level > max_level)
+            max_level = pt_level;
         if (pt_level) {
-            linkLists[i] = (char*) malloc(link_size * pt_level);
+            linkLists[i] = (char*)malloc(link_size * pt_level);
             if (linkLists[i] == nullptr) {
                 throw std::runtime_error("No enough memory 4 linkLists!");
             }
             memset(linkLists[i], 0, link_size * pt_level);
         }
     }
-
 }
 
 HNSWfast::~HNSWfast() {
-    if(!loaded) {
+    if (!loaded) {
         free(level0_links);
         for (auto i = 0; i < levels.size(); ++i) {
             if (levels[i])
@@ -81,7 +81,7 @@ void HNSWfast::reset() {
     max_level = -1;
     entry_point = -1;
     free(level0_links);
-    for (auto i = 0; i < levels.size(); ++ i) {
+    for (auto i = 0; i < levels.size(); ++i) {
         if (levels[i])
             free(linkLists[i]);
     }
@@ -92,13 +92,12 @@ void HNSWfast::reset() {
     level_constant = 1 / log(1.0 * M);
 }
 
-int HNSWfast::prepare_level_tab(size_t n, bool preset_levels)
-{
+int HNSWfast::prepare_level_tab(size_t n, bool preset_levels) {
     size_t n0 = levels.size();
     size_t n1 = n0 + n;
 
     if (preset_levels) {
-        FAISS_ASSERT (n1 == levels.size());
+        FAISS_ASSERT(n1 == levels.size());
     } else {
         levels.resize(n1);
         for (int i = 0; i < n; i++) {
@@ -107,24 +106,26 @@ int HNSWfast::prepare_level_tab(size_t n, bool preset_levels)
         }
     }
 
-    char *level0_links_new = (char *) realloc(level0_links, level0_link_size * n1);
+    char* level0_links_new =
+            (char*)realloc(level0_links, level0_link_size * n1);
     if (level0_links_new == nullptr)
         throw std::runtime_error("No enough memory 4 level0_links!");
     level0_links = level0_links_new;
     memset(level0_links + n0 * level0_link_size, 0, n * level0_link_size);
 
-    char **linkLists_new = (char **) realloc(linkLists, sizeof(void *) * n1);
+    char** linkLists_new = (char**)realloc(linkLists, sizeof(void*) * n1);
     if (linkLists_new == nullptr)
         throw std::runtime_error("No enough memory 4 level0_links_new!");
     linkLists = linkLists_new;
-    memset(linkLists + n0 * sizeof(void *), 0, n * sizeof(void *));
+    memset(linkLists + n0 * sizeof(void*), 0, n * sizeof(void*));
 
     int debug_space = 0;
     for (int i = 0; i < n; i++) {
         int pt_level = levels[i + n0];
-        if (pt_level > max_level) max_level = pt_level;
+        if (pt_level > max_level)
+            max_level = pt_level;
         if (pt_level) {
-            linkLists[n0 + i] = (char*) malloc(link_size * pt_level);
+            linkLists[n0 + i] = (char*)malloc(link_size * pt_level);
             if (linkLists[n0 + i] == nullptr) {
                 throw std::runtime_error("No enough memory 4 linkLists!");
             }
@@ -132,21 +133,21 @@ int HNSWfast::prepare_level_tab(size_t n, bool preset_levels)
         }
     }
 
-//    std::vector<std::mutex>(n0 + n).swap(link_list_locks);
-//    if (visited_list_pool) delete visited_list_pool;
-//    visited_list_pool = new VisitedListPool(1, n1);
+    //    std::vector<std::mutex>(n0 + n).swap(link_list_locks);
+    //    if (visited_list_pool) delete visited_list_pool;
+    //    visited_list_pool = new VisitedListPool(1, n1);
 
     return max_level;
 }
 
 void HNSWfast::dump_level0(int current) {
     std::cout << "hnswfast: " << __func__ << ": " << current << std::endl;
-    for(int i=0; i<=current; i++) {
+    for (int i = 0; i <= current; i++) {
         std::cout << "\t" << i << ":";
-        int *curObj_link = get_neighbor_link(i, 0);
+        int* curObj_link = get_neighbor_link(i, 0);
         auto curObj_nei_num = get_neighbors_num(curObj_link);
-        for(int j=0; j<curObj_nei_num; j++) {
-            std::cout << curObj_link[j+1] << ", ";
+        for (int j = 0; j < curObj_nei_num; j++) {
+            std::cout << curObj_link[j + 1] << ", ";
         }
         std::cout << std::endl;
     }
@@ -169,17 +170,18 @@ void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
     if (currObj != -1) {
         if (pt_level < maxlevel_copy) {
             float curdist = ptdis(currObj);
-            for (int lev = maxlevel_copy; lev > pt_level; lev --) {
+            for (int lev = maxlevel_copy; lev > pt_level; lev--) {
                 bool changed = true;
                 while (changed) {
                     changed = false;
                     std::unique_lock<std::mutex> lk(link_list_locks[currObj]);
-                    int *curObj_link = get_neighbor_link(currObj, lev);
+                    int* curObj_link = get_neighbor_link(currObj, lev);
                     auto curObj_nei_num = get_neighbors_num(curObj_link);
-                    for (auto i = 1; i <= curObj_nei_num; ++ i) {
+                    for (auto i = 1; i <= curObj_nei_num; ++i) {
                         int cand = curObj_link[i];
                         if (cand < 0 || cand > levels.size())
-                            throw std::runtime_error("cand error when addPoint");
+                            throw std::runtime_error(
+                                    "cand error when addPoint");
                         float d = ptdis(cand);
                         if (d < curdist) {
                             curdist = d;
@@ -191,11 +193,12 @@ void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
             }
         }
 
-        for (int lev = std::min(pt_level, maxlevel_copy); lev >= 0; -- lev) {
+        for (int lev = std::min(pt_level, maxlevel_copy); lev >= 0; --lev) {
             if (lev > maxlevel_copy || lev < 0)
                 throw std::runtime_error("Level error");
 
-            std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates = search_layer(ptdis, currObj, lev);
+            std::priority_queue<Node, std::vector<Node>, CompareByFirst>
+                    top_candidates = search_layer(ptdis, currObj, lev);
             currObj = make_connection(ptdis, pt_id, top_candidates, lev);
         }
     } else {
@@ -207,15 +210,16 @@ void HNSWfast::addPoint(DistanceComputer& ptdis, int pt_level, int pt_id) {
         entry_point = pt_id;
         max_level = pt_level;
     }
-    //dump_level0(pt_id);
+    // dump_level0(pt_id);
 }
 
-std::priority_queue<Node, std::vector<Node>, CompareByFirst>
-HNSWfast::search_layer(DistanceComputer& ptdis,
-                    storage_idx_t nearest,
-                    int level) {
-    VisitedList *vl = visited_list_pool->getFreeVisitedList();
-    vl_type *visited_array = vl->mass;
+std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
+        search_layer(
+                DistanceComputer& ptdis,
+                storage_idx_t nearest,
+                int level) {
+    VisitedList* vl = visited_list_pool->getFreeVisitedList();
+    vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
 
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates;
@@ -234,12 +238,13 @@ HNSWfast::search_layer(DistanceComputer& ptdis,
         candidate_set.pop();
         int cur_id = currNode.second;
         std::unique_lock<std::mutex> lk(link_list_locks[cur_id]);
-        int *cur_link = get_neighbor_link(cur_id, level);
+        int* cur_link = get_neighbor_link(cur_id, level);
         auto cur_neighbor_num = get_neighbors_num(cur_link);
 
-        for (auto i = 1; i <= cur_neighbor_num; ++ i) {
+        for (auto i = 1; i <= cur_neighbor_num; ++i) {
             int candidate_id = cur_link[i];
-            if (visited_array[candidate_id] == visited_array_tag) continue;
+            if (visited_array[candidate_id] == visited_array_tag)
+                continue;
             visited_array[candidate_id] = visited_array_tag;
             float dcand = ptdis(candidate_id);
             if (top_candidates.size() < efConstruction || lb > dcand) {
@@ -256,15 +261,16 @@ HNSWfast::search_layer(DistanceComputer& ptdis,
     return top_candidates;
 }
 
-std::priority_queue<Node, std::vector<Node>, CompareByFirst>
-HNSWfast::search_base_layer(DistanceComputer& ptdis,
-                         storage_idx_t nearest,
-                         storage_idx_t ef,
-                         float d_nearest,
-                         const SearchParametersHNSW* param) const {
+std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
+        search_base_layer(
+                DistanceComputer& ptdis,
+                storage_idx_t nearest,
+                storage_idx_t ef,
+                float d_nearest,
+                const SearchParametersHNSW* param) const {
     const IDSelector* sel = param ? param->sel : nullptr;
-    VisitedList *vl = visited_list_pool->getFreeVisitedList();
-    vl_type *visited_array = vl->mass;
+    VisitedList* vl = visited_list_pool->getFreeVisitedList();
+    vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
 
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates;
@@ -287,9 +293,9 @@ HNSWfast::search_base_layer(DistanceComputer& ptdis,
             break;
         candidate_set.pop();
         int cur_id = currNode.second;
-        int *cur_link = get_neighbor_link(cur_id, 0);
+        int* cur_link = get_neighbor_link(cur_id, 0);
         auto cur_neighbor_num = get_neighbors_num(cur_link);
-        for (auto i = 1; i <= cur_neighbor_num; ++ i) {
+        for (auto i = 1; i <= cur_neighbor_num; ++i) {
             int candidate_id = cur_link[i];
             if (visited_array[candidate_id] != visited_array_tag) {
                 visited_array[candidate_id] = visited_array_tag;
@@ -311,44 +317,48 @@ HNSWfast::search_base_layer(DistanceComputer& ptdis,
     return top_candidates;
 }
 
-int
-HNSWfast::make_connection(DistanceComputer& ptdis,
-                       storage_idx_t pt_id,
-                       std::priority_queue<Node, std::vector<Node>, CompareByFirst> &cand,
-                       int level) {
+int HNSWfast::make_connection(
+        DistanceComputer& ptdis,
+        storage_idx_t pt_id,
+        std::priority_queue<Node, std::vector<Node>, CompareByFirst>& cand,
+        int level) {
     int maxM = level ? M : M << 1;
-    int *selectedNeighbors = (int*)malloc(sizeof(int) * maxM);
+    int* selectedNeighbors = (int*)malloc(sizeof(int) * maxM);
     int selectedNeighborsNum = 0;
     prune_neighbors(ptdis, cand, M, selectedNeighbors, selectedNeighborsNum);
     if (selectedNeighborsNum > M)
-        throw std::runtime_error("Wrong size of candidates returned by prune_neighbors!");
+        throw std::runtime_error(
+                "Wrong size of candidates returned by prune_neighbors!");
 
     int next_closest_entry_point = selectedNeighbors[0];
 
-    int *cur_link = get_neighbor_link(pt_id, level);
+    int* cur_link = get_neighbor_link(pt_id, level);
     if (*cur_link)
-        throw std::runtime_error("The newly inserted element should have blank link");
+        throw std::runtime_error(
+                "The newly inserted element should have blank link");
 
     set_neighbors_num(cur_link, selectedNeighborsNum);
     for (auto i = 1; i <= selectedNeighborsNum; ++i) {
         if (cur_link[i])
             throw std::runtime_error("Possible memory corruption.");
         if (level > levels[selectedNeighbors[i - 1]])
-            throw std::runtime_error("Trying to make a link on a non-exisitent level.");
+            throw std::runtime_error(
+                    "Trying to make a link on a non-exisitent level.");
         cur_link[i] = selectedNeighbors[i - 1];
     }
 
-    for (auto i = 0; i < selectedNeighborsNum; ++ i) {
+    for (auto i = 0; i < selectedNeighborsNum; ++i) {
         std::unique_lock<std::mutex> lk(link_list_locks[selectedNeighbors[i]]);
 
-        int *selected_link = get_neighbor_link(selectedNeighbors[i], level);
+        int* selected_link = get_neighbor_link(selectedNeighbors[i], level);
         auto selected_neighbor_num = get_neighbors_num(selected_link);
         if (selected_neighbor_num > maxM)
             throw std::runtime_error("Bad value of selected_neighbor_num.");
         if (selectedNeighbors[i] == pt_id)
             throw std::runtime_error("Trying to connect an element to itself.");
         if (level > levels[selectedNeighbors[i]])
-            throw std::runtime_error("Trying to make a link on a non-exisitent level.");
+            throw std::runtime_error(
+                    "Trying to make a link on a non-exisitent level.");
         if (selected_neighbor_num < maxM) {
             selected_link[selected_neighbor_num + 1] = pt_id;
             set_neighbors_num(selected_link, selected_neighbor_num + 1);
@@ -356,8 +366,11 @@ HNSWfast::make_connection(DistanceComputer& ptdis,
             double d_max = ptdis(selectedNeighbors[i]);
             std::priority_queue<Node, std::vector<Node>, CompareByFirst> candi;
             candi.emplace(d_max, pt_id);
-            for (auto j = 1; j <= selected_neighbor_num; ++ j)
-                candi.emplace(ptdis.symmetric_dis(selectedNeighbors[i], selected_link[j]), selected_link[j]);
+            for (auto j = 1; j <= selected_neighbor_num; ++j)
+                candi.emplace(
+                        ptdis.symmetric_dis(
+                                selectedNeighbors[i], selected_link[j]),
+                        selected_link[j]);
             int indx = 0;
             prune_neighbors(ptdis, candi, maxM, selected_link + 1, indx);
             set_neighbors_num(selected_link, indx);
@@ -368,9 +381,12 @@ HNSWfast::make_connection(DistanceComputer& ptdis,
     return next_closest_entry_point;
 }
 
-void HNSWfast::prune_neighbors(DistanceComputer& ptdis,
-                            std::priority_queue<Node, std::vector<Node>, CompareByFirst> &cand,
-                            const int maxM, int *ret, int &ret_len) {
+void HNSWfast::prune_neighbors(
+        DistanceComputer& ptdis,
+        std::priority_queue<Node, std::vector<Node>, CompareByFirst>& cand,
+        const int maxM,
+        int* ret,
+        int& ret_len) {
     if (cand.size() < maxM) {
         ret_len = cand.size();
         for (int i = static_cast<int>(cand.size()) - 1; i >= 0; i--) {
@@ -387,9 +403,9 @@ void HNSWfast::prune_neighbors(DistanceComputer& ptdis,
             cand.pop();
         }
 
-        for (auto &curr: queue_closest) {
+        for (auto& curr : queue_closest) {
             bool good = true;
-            for (auto i = 0; i < ret_len; ++ i) {
+            for (auto i = 0; i < ret_len; ++i) {
                 float cur_dist = ptdis.symmetric_dis(curr.second, ret[i]);
                 if (cur_dist < curr.first) {
                     good = false;
@@ -406,20 +422,24 @@ void HNSWfast::prune_neighbors(DistanceComputer& ptdis,
     }
 }
 
-void HNSWfast::searchKnn(DistanceComputer& qdis, int k,
-                      idx_t *I, float *D, const SearchParametersHNSW* param) const {
+void HNSWfast::searchKnn(
+        DistanceComputer& qdis,
+        int k,
+        idx_t* I,
+        float* D,
+        const SearchParametersHNSW* param) const {
     if (levels.size() == 0)
         return;
     int ep = entry_point;
     float dist = qdis(ep);
 
-    for (auto i = max_level; i > 0; -- i) {
+    for (auto i = max_level; i > 0; --i) {
         bool good = true;
         while (good) {
             good = false;
-            int *ep_link = get_neighbor_link(ep, i);
+            int* ep_link = get_neighbor_link(ep, i);
             auto ep_neighbors_cnt = get_neighbors_num(ep_link);
-            for (auto j = 1; j <= ep_neighbors_cnt; ++ j) {
+            for (auto j = 1; j <= ep_neighbors_cnt; ++j) {
                 int cand = ep_link[j];
                 if (cand < 0 || cand > levels.size())
                     throw std::runtime_error("cand error");
@@ -433,11 +453,12 @@ void HNSWfast::searchKnn(DistanceComputer& qdis, int k,
         }
     }
     int ef_search = efSearch;
-    if(param) {
+    if (param) {
         ef_search = param->efSearch;
     }
-    std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates =
-            search_base_layer(qdis, ep, std::max(ef_search, k), dist, param);
+    std::priority_queue<Node, std::vector<Node>, CompareByFirst>
+            top_candidates = search_base_layer(
+                    qdis, ep, std::max(ef_search, k), dist, param);
     while (top_candidates.size() > k)
         top_candidates.pop();
     int rst_num = top_candidates.size();
@@ -448,10 +469,10 @@ void HNSWfast::searchKnn(DistanceComputer& qdis, int k,
         i--;
         top_candidates.pop();
     }
-    for (;rst_num < k; rst_num++) {
+    for (; rst_num < k; rst_num++) {
         I[rst_num] = -1;
-        D[rst_num] = 1.0/0.0;
+        D[rst_num] = 1.0 / 0.0;
     }
 }
 
-}  // namespace faiss
+} // namespace faiss

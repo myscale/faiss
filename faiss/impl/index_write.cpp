@@ -317,7 +317,7 @@ static void write_HNSW(const HNSW* hnsw, IOWriter* f) {
     WRITE1(hnsw->upper_beam);
 }
 
-static void write_HNSW_fast(const HNSWfast* hnswf, IOWriter* f){
+static void write_HNSW_fast(const HNSWfast* hnswf, IOWriter* f) {
     WRITE1(hnswf->M)
     WRITE1(hnswf->level0_link_size);
     WRITE1(hnswf->link_size);
@@ -326,16 +326,19 @@ static void write_HNSW_fast(const HNSWfast* hnswf, IOWriter* f){
     WRITE1(hnswf->max_level);
     WRITE1(hnswf->efConstruction);
     WRITE1(hnswf->efSearch);
-    
+
     WRITE1(hnswf->has_deletion);
     WRITE1(hnswf->level_constant);
 
-    WRITEVECTOR (hnswf->levels);
-    WRITEANDCHECK (hnswf->level0_links, hnswf->level0_link_size * hnswf->levels.size());
+    WRITEVECTOR(hnswf->levels);
+    WRITEANDCHECK(
+            hnswf->level0_links,
+            hnswf->level0_link_size * hnswf->levels.size());
 
     for (auto i = 0; i < hnswf->levels.size(); ++i) {
-        if (hnswf->levels[i]){
-            WRITEANDCHECK(hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
+        if (hnswf->levels[i]) {
+            WRITEANDCHECK(
+                    hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
         }
     }
 }
@@ -773,10 +776,11 @@ void write_index(const Index* idx, IOWriter* f) {
         write_HNSW(&idxhnsw->hnsw, f);
         write_index(idxhnsw->storage, f);
     } else if (auto* idxhnswfast = dynamic_cast<const IndexHNSWfast*>(idx)) {
-        uint32_t h = dynamic_cast<const IndexHNSWfastFlat*>(idx) ? fourcc("IHFf")
-                : dynamic_cast<const IndexHNSWfastPQ*>(idx)      ? fourcc("IHFp")
-                : dynamic_cast<const IndexHNSWfastSQ*>(idx)      ? fourcc("IHFs")
-                                                             : 0;
+        uint32_t h = dynamic_cast<const IndexHNSWfastFlat*>(idx)
+                ? fourcc("IHFf")
+                : dynamic_cast<const IndexHNSWfastPQ*>(idx) ? fourcc("IHFp")
+                : dynamic_cast<const IndexHNSWfastSQ*>(idx) ? fourcc("IHFs")
+                                                            : 0;
         FAISS_THROW_IF_NOT(h != 0);
         WRITE1(h);
         std::cout << "write " << h << std::endl;

@@ -1,22 +1,21 @@
 #pragma once
 
-#include <vector>
-#include <mutex>
-#include <unordered_set>
-#include <unordered_map>
-#include <queue>
 #include <algorithm>
+#include <mutex>
+#include <queue>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <omp.h>
 //#include "/usr/local/Cellar/libomp/13.0.0/include/omp.h"
 
-
 #include <faiss/Index.h>
 #include <faiss/impl/FaissAssert.h>
-#include <faiss/utils/random.h>
-#include <faiss/utils/Heap.h>
-#include <faiss/impl/IDSelector.h>
 #include <faiss/impl/HNSW.h>
+#include <faiss/impl/IDSelector.h>
+#include <faiss/utils/Heap.h>
+#include <faiss/utils/random.h>
 
 namespace faiss {
 
@@ -36,12 +35,11 @@ namespace faiss {
  * IndexHNSW.h for the full index object.
  */
 
-
 struct DistanceComputer; // from AuxIndexStructures
 class VisitedListPool;
 
 class HNSWfast {
-public:
+   public:
     /// internal storage of vectors (32 bits: this is expensive)
     typedef int storage_idx_t;
 
@@ -68,15 +66,16 @@ public:
         std::vector<float> dis;
         typedef faiss::CMax<float, storage_idx_t> HC;
 
-        explicit MinimaxHeap(int n): n(n), k(0), nvalid(0), ids(n), dis(n) {}
+        explicit MinimaxHeap(int n) : n(n), k(0), nvalid(0), ids(n), dis(n) {}
 
         void push(storage_idx_t i, float v) {
             if (k == n) {
-                if (v >= dis[0]) return;
-                faiss::heap_pop<HC> (k--, dis.data(), ids.data());
+                if (v >= dis[0])
+                    return;
+                faiss::heap_pop<HC>(k--, dis.data(), ids.data());
                 --nvalid;
             }
-            faiss::heap_push<HC> (++k, dis.data(), ids.data(), v, i);
+            faiss::heap_push<HC>(++k, dis.data(), ids.data(), v, i);
             ++nvalid;
         }
 
@@ -92,26 +91,29 @@ public:
             nvalid = k = 0;
         }
 
-        int pop_min(float *vmin_out = nullptr) {
+        int pop_min(float* vmin_out = nullptr) {
             assert(k > 0);
             // returns min. This is an O(n) operation
             int i = k - 1;
             while (i >= 0) {
-                if (ids[i] != -1) break;
+                if (ids[i] != -1)
+                    break;
                 i--;
             }
-            if (i == -1) return -1;
+            if (i == -1)
+                return -1;
             int imin = i;
             float vmin = dis[i];
             i--;
-            while(i >= 0) {
+            while (i >= 0) {
                 if (ids[i] != -1 && dis[i] < vmin) {
                     vmin = dis[i];
                     imin = i;
                 }
                 i--;
             }
-            if (vmin_out) *vmin_out = vmin;
+            if (vmin_out)
+                *vmin_out = vmin;
             int ret = ids[imin];
             ids[imin] = -1;
             --nvalid;
@@ -121,7 +123,7 @@ public:
 
         int count_below(float thresh) {
             int n_below = 0;
-            for(int i = 0; i < k; i++) {
+            for (int i = 0; i < k; i++) {
                 if (dis[i] < thresh) {
                     n_below++;
                 }
@@ -135,30 +137,33 @@ public:
     struct NodeDistCloser {
         float d;
         int id;
-        NodeDistCloser(float d, int id): d(d), id(id) {}
-        bool operator < (const NodeDistCloser &obj1) const { return d < obj1.d; }
+        NodeDistCloser(float d, int id) : d(d), id(id) {}
+        bool operator<(const NodeDistCloser& obj1) const {
+            return d < obj1.d;
+        }
     };
 
     struct NodeDistFarther {
         float d;
         int id;
-        NodeDistFarther(float d, int id): d(d), id(id) {}
-        bool operator < (const NodeDistFarther &obj1) const { return d > obj1.d; }
-    };
-
-    struct CompareByFirst {
-        constexpr bool operator()(Node const &a,
-                                  Node const &b) const noexcept {
-            return a.first < b.first;
+        NodeDistFarther(float d, int id) : d(d), id(id) {}
+        bool operator<(const NodeDistFarther& obj1) const {
+            return d > obj1.d;
         }
     };
 
+    struct CompareByFirst {
+        constexpr bool operator()(Node const& a, Node const& b) const noexcept {
+            return a.first < b.first;
+        }
+    };
 
     /// level of each vector (base level = 1), size = ntotal
     std::vector<int> levels;
     std::vector<int> level_stats;
 
-    /// entry point in the search structure (one of the points with maximum level
+    /// entry point in the search structure (one of the points with maximum
+    /// level
     storage_idx_t entry_point;
 
     faiss::RandomGenerator rng;
@@ -167,12 +172,12 @@ public:
     /// maximum level
     int max_level;
     int M;
-    char *level0_links;
-    char **linkLists;
+    char* level0_links;
+    char** linkLists;
     size_t level0_link_size;
     size_t link_size;
     double level_constant;
-    VisitedListPool *visited_list_pool;
+    VisitedListPool* visited_list_pool;
 
     bool has_deletion = false;
 
@@ -186,13 +191,15 @@ public:
 
     /// range of entries in the neighbors table of vertex no at layer_no
     storage_idx_t* get_neighbor_link(idx_t no, int layer_no) const {
-        return layer_no == 0 ? (int*)(level0_links + no * level0_link_size) : (int*)(linkLists[no] + (layer_no - 1) * link_size);
+        return layer_no == 0
+                ? (int*)(level0_links + no * level0_link_size)
+                : (int*)(linkLists[no] + (layer_no - 1) * link_size);
     }
-    unsigned short int get_neighbors_num(int *p) const {
+    unsigned short int get_neighbors_num(int* p) const {
         return *((unsigned short int*)p);
     }
-    void set_neighbors_num(int *p, unsigned short int num) const {
-        *((unsigned short int*)(p)) = *((unsigned short int *)(&num));
+    void set_neighbors_num(int* p, unsigned short int num) const {
+        *((unsigned short int*)(p)) = *((unsigned short int*)(&num));
     }
 
     /// only mandatory parameter: nb of neighbors
@@ -208,14 +215,14 @@ public:
     }
 
     void dump_level0(int current);
-    
+
     void reset();
 
     int prepare_level_tab(size_t n, bool preset_levels = false);
 
     // re-implementations inspired by hnswlib
     /** add point pt_id on all levels <= pt_level and build the link
-      * structure for them. inspired by implementation of hnswlib */
+     * structure for them. inspired by implementation of hnswlib */
     void addPoint(DistanceComputer& ptdis, int pt_level, int pt_id);
 
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> search_layer(
@@ -252,18 +259,18 @@ public:
             float* D,
             const SearchParametersHNSW* param = nullptr) const;
 
-    HNSWfast & operator=(const HNSWfast & rhs){
+    HNSWfast& operator=(const HNSWfast& rhs) {
         return *this;
     }
 
     void init_link_list_lock(int ntotal) {
         std::vector<std::mutex>(ntotal).swap(link_list_locks);
     }
-private:
+
+   private:
     std::vector<std::mutex> link_list_locks;
     std::mutex global;
 };
-
 
 /**************************************************************
  * Auxiliary structures
@@ -274,7 +281,7 @@ typedef unsigned short int vl_type;
 class VisitedList {
    public:
     vl_type curV;
-    vl_type *mass;
+    vl_type* mass;
     unsigned int numelements;
 
     VisitedList(int numelements1) {
@@ -306,7 +313,9 @@ class VisitedList {
         reset();
     }
 
-    ~VisitedList() { delete[] mass; }
+    ~VisitedList() {
+        delete[] mass;
+    }
 };
 
 ///////////////////////////////////////////////////////////
@@ -316,7 +325,7 @@ class VisitedList {
 /////////////////////////////////////////////////////////
 
 class VisitedListPool {
-    std::deque<VisitedList *> pool;
+    std::deque<VisitedList*> pool;
     std::mutex poolguard;
     int numelements;
 
@@ -327,10 +336,10 @@ class VisitedListPool {
             pool.push_front(new VisitedList(numelements));
     }
 
-    VisitedList *getFreeVisitedList() {
-        VisitedList *rez;
+    VisitedList* getFreeVisitedList() {
+        VisitedList* rez;
         {
-            std::unique_lock <std::mutex> lock(poolguard);
+            std::unique_lock<std::mutex> lock(poolguard);
             if (pool.size() > 0) {
                 rez = pool.front();
                 pool.pop_front();
@@ -342,24 +351,25 @@ class VisitedListPool {
         return rez;
     }
 
-    void releaseVisitedList(VisitedList *vl) {
-        std::unique_lock <std::mutex> lock(poolguard);
+    void releaseVisitedList(VisitedList* vl) {
+        std::unique_lock<std::mutex> lock(poolguard);
         pool.push_front(vl);
     }
 
     ~VisitedListPool() {
         while (pool.size()) {
-            VisitedList *rez = pool.front();
+            VisitedList* rez = pool.front();
             pool.pop_front();
             delete rez;
         }
     }
 
     int64_t GetSize() {
-        auto visit_list_size = sizeof(VisitedList) + numelements * sizeof(vl_type);
-        auto pool_size = pool.size() * (sizeof(VisitedList *) + visit_list_size);
+        auto visit_list_size =
+                sizeof(VisitedList) + numelements * sizeof(vl_type);
+        auto pool_size = pool.size() * (sizeof(VisitedList*) + visit_list_size);
         return pool_size + sizeof(*this);
     }
 };
 
-}  // namespace faiss
+} // namespace faiss
