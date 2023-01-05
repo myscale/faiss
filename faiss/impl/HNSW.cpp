@@ -15,10 +15,7 @@
 #include <faiss/impl/DistanceComputer.h>
 #include <faiss/impl/IDSelector.h>
 
-#include <SearchIndex/Common/Utils.h>
-
 namespace faiss {
-
 /**************************************************************
  * HNSW structure implementation
  **************************************************************/
@@ -529,33 +526,43 @@ int search_from_candidates(
         int nres_in = 0,
         const SearchParametersHNSW* params = nullptr) {
     int nres = nres_in;
+    int ndis = 0;
 
+    // can be overridden by search params
+    bool do_dis_check = params ? params->check_relative_distance
+                               : hnsw.check_relative_distance;
     int efSearch = params ? params->efSearch : hnsw.efSearch;
     const IDSelector* sel = params ? params->sel : nullptr;
-    
-    std::vector<idx_t> indexs(efSearch);
-    std::vector<float> distances(efSearch);
-    
+
     for (int i = 0; i < candidates.size(); i++) {
         idx_t v1 = candidates.ids[i];
         float d = candidates.dis[i];
         FAISS_ASSERT(v1 >= 0);
         if (!sel || sel->is_member(v1)) {
             if (nres < k) {
-                faiss::maxheap_push(++nres, distances.data(), indexs.data(), d, v1);
-            } else if (d < distances[0]) {
-                faiss::maxheap_replace_top(nres, distances.data(), indexs.data(), d, v1);
+                faiss::maxheap_push(++nres, D, I, d, v1);
+            } else if (d < D[0]) {
+                faiss::maxheap_replace_top(nres, D, I, d, v1);
             }
         }
         vt.set(v1);
     }
 
+    int nstep = 0;
+
     while (candidates.size() > 0) {
         float d0 = 0;
         int v0 = candidates.pop_min(&d0);
-        
-        if (nres == efSearch && d0 > distances[0]) {
-            break;
+
+        if (do_dis_check) {
+            // tricky stopping condition: there are more that ef
+            // distances that are processed already that are smaller
+            // than d0
+
+            int n_dis_below = candidates.count_below(d0);
+            if (n_dis_below >= efSearch) {
+                break;
+            }
         }
 
         size_t begin, end;
@@ -569,31 +576,31 @@ int search_from_candidates(
                 continue;
             }
             vt.set(v1);
+            ndis++;
             float d = qdis(v1);
-            if (nres < efSearch || distances[0] > d) {
-                candidates.push(v1, d);
-                if (!sel || sel->is_member(v1)) {
-                    if (nres < efSearch) {
-                        faiss::maxheap_push(++nres, distances.data(), indexs.data(), d, v1);
-                    } else {
-                        faiss::maxheap_replace_top(nres, distances.data(), indexs.data(), d, v1);
-                    }
+            if (!sel || sel->is_member(v1)) {
+                if (nres < k) {
+                    faiss::maxheap_push(++nres, D, I, d, v1);
+                } else if (d < D[0]) {
+                    faiss::maxheap_replace_top(nres, D, I, d, v1);
                 }
             }
+            candidates.push(v1, d);
+        }
+
+        nstep++;
+        if (!do_dis_check && nstep > efSearch) {
+            break;
         }
     }
-    while (nres > k) {
-        faiss::maxheap_pop(nres--, distances.data(), indexs.data());
-    }
-    for(int i = nres-1; i >= 0 && nres - 1 - i < k; i--){
-        I[nres - 1 - i] = indexs[i];
-        D[nres - 1 - i] = distances[i];
-    }
 
-    SI_VLOG(10, "HNSW::search_from_candidates candidates_size=%d nstep=%d ndis=%d "
-                "num_skipped=%d num_tested=%d delta=%d\n",
-            candidates.size(), nstep, ndis, num_skipped, num_tested, num_tested - num_skipped);
-
+    if (level == 0) {
+        stats.n1++;
+        if (candidates.size() == 0) {
+            stats.n2++;
+        }
+        stats.n3 += ndis;
+    }
 
     return nres;
 }
@@ -654,6 +661,12 @@ std::priority_queue<HNSW::Node> search_from_candidate_unbounded(
         }
     }
 
+    ++stats.n1;
+    if (candidates.size() == 0) {
+        ++stats.n2;
+    }
+    stats.n3 += ndis;
+
     return top_candidates;
 }
 
@@ -679,8 +692,7 @@ HNSWStats HNSW::search(
             greedy_update_nearest(*this, qdis, level, nearest, d_nearest);
         }
 
-        // use params->efSearch to override efSearch
-        int ef = std::max(params && params->efSearch ? params->efSearch: efSearch, k);
+        int ef = std::max(efSearch, k);
         if (search_bounded_queue) { // this is the most common branch
             MinimaxHeap candidates(ef);
 
@@ -821,7 +833,6 @@ void HNSW::search_level_0(
  **************************************************************/
 
 void HNSW::MinimaxHeap::push(storage_idx_t i, float v) {
-    SI_VLOG(50, "MinimaxHeap::push k=%d, n=%d, valid=%d\n", k, n, nvalid);
     if (k == n) {
         if (v >= dis[0])
             return;
