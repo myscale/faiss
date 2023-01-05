@@ -392,7 +392,6 @@ static void read_HNSW_fast(HNSWfast* hnswf, IOReader* f) {
     hnswf->visited_list_pool = new VisitedListPool(1, ntotal);
     hnswf->init_link_list_lock(hnswf->levels.size());
 
-    hnswf->level_stats = std::vector<int>(hnswf->max_level + 1, 0);
     hnswf->level0_links = (char*)malloc(ntotal * hnswf->level0_link_size);
     READANDCHECK(hnswf->level0_links, ntotal * hnswf->level0_link_size);
     hnswf->linkLists = (char**)malloc(ntotal * sizeof(void*));
@@ -402,9 +401,6 @@ static void read_HNSW_fast(HNSWfast* hnswf, IOReader* f) {
                     (char*)malloc(hnswf->link_size * hnswf->levels[i]);
             READANDCHECK(
                     hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
-            hnswf->level_stats[hnswf->levels[i]]++;
-        } else {
-            hnswf->level_stats[0]++;
         }
     }
 }

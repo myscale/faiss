@@ -160,7 +160,6 @@ class HNSWfast {
 
     /// level of each vector (base level = 1), size = ntotal
     std::vector<int> levels;
-    std::vector<int> level_stats;
 
     /// entry point in the search structure (one of the points with maximum
     /// level
