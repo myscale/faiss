@@ -602,6 +602,9 @@ int search_from_candidates(
         stats.n3 += ndis;
     }
 
+    SI_VLOG(10, "HNSW::search_from_candidates candidates_size=%d nstep=%d ndis=%d",
+            candidates.size(), nstep, ndis);
+
     return nres;
 }
 
