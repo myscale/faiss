@@ -66,13 +66,11 @@ void HNSWfast::init(int ntotal) {
 }
 
 HNSWfast::~HNSWfast() {
-    if (!loaded) {
-        free(level0_links);
-        for (auto i = 0; i < levels.size(); ++i) {
-            if (levels[i])
-                free(linkLists[i]);
-        }
+    for (auto i = 0; i < levels.size(); ++i) {
+        if (levels[i])
+            free(linkLists[i]);
     }
+    free(level0_links);
     free(linkLists);
     delete visited_list_pool;
 }
@@ -313,6 +311,9 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
             }
         }
     }
+    //std::cout << "distance_compute: " << distance_compute << ", "
+    //          << "ef: " << ef << ", M: " << M
+    //          << std::endl;
     visited_list_pool->releaseVisitedList(vl);
     return top_candidates;
 }
