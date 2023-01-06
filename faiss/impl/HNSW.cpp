@@ -605,10 +605,8 @@ int search_from_candidates(
         stats.n3 += ndis;
     }
 
-    //SI_VLOG(10, "HNSW::search_from_candidates candidates_size=%d nstep=%d ndis=%d "
-    //            "num_skipped=%d num_tested=%d delta=%d\n",
-    //        candidates.size(), nstep, ndis, num_skipped, num_tested, num_tested - num_skipped);
-
+    SI_VLOG(10, "HNSW::search_from_candidates candidates_size=%d nstep=%d ndis=%d",
+            candidates.size(), nstep, ndis);
 
     return nres;
 }
