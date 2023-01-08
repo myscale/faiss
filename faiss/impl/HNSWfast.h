@@ -38,6 +38,24 @@ namespace faiss {
 struct DistanceComputer; // from AuxIndexStructures
 class VisitedListPool;
 
+struct HnswSearchStatisitc {
+    uint32_t cmp_nb;
+    uint32_t update_candidat_nb;
+    uint32_t update_topset_nb;
+    uint32_t swap_candidate_nb;
+    HnswSearchStatisitc():cmp_nb(0), update_candidat_nb(0), update_topset_nb(0), swap_candidate_nb(0){}
+};
+
+struct HnswPruneStatisitic {
+    uint32_t prune_cmp_number;
+    std::vector<float> edge_distance;
+};
+
+struct HnswBuildStatisitic {
+    HnswPruneStatisitic* graph_static;
+    HnswSearchStatisitc* search_statistic;
+};
+
 class HNSWfast {
    public:
     /// internal storage of vectors (32 bits: this is expensive)
@@ -235,7 +253,8 @@ class HNSWfast {
             storage_idx_t nearest,
             storage_idx_t ef,
             float d_nearest,
-            const SearchParametersHNSW* param) const;
+            const SearchParametersHNSW* param,
+            HnswSearchStatisitc* stat) const;
 
     int make_connection(
             DistanceComputer& ptdis,
@@ -256,7 +275,7 @@ class HNSWfast {
             int k,
             idx_t* I,
             float* D,
-            const SearchParametersHNSW* param = nullptr) const;
+            const SearchParametersHNSW* param = nullptr, HnswSearchStatisitc* stat = nullptr) const;
 
     HNSWfast& operator=(const HNSWfast& rhs) {
         return *this;

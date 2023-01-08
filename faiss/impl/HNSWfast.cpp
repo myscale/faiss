@@ -259,13 +259,22 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
     return top_candidates;
 }
 
+#define ENABLE_STAT
+#ifdef ENABLE_STAT
+#define IF_STATISTIC(stat, inc_stat) \
+    if(stat) { \
+        inc_stat; \
+    }
+#endif
+
 std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
         search_base_layer(
                 DistanceComputer& ptdis,
                 storage_idx_t nearest,
                 storage_idx_t ef,
                 float d_nearest,
-                const SearchParametersHNSW* param) const {
+                const SearchParametersHNSW* param,
+                HnswSearchStatisitc* stat) const {
     const IDSelector* sel = param ? param->sel : nullptr;
     VisitedList* vl = visited_list_pool->getFreeVisitedList();
     vl_type* visited_array = vl->mass;
@@ -298,22 +307,26 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
             if (visited_array[candidate_id] != visited_array_tag) {
                 visited_array[candidate_id] = visited_array_tag;
                 float dcand = ptdis(candidate_id);
+                IF_STATISTIC(stat, stat->cmp_nb++);
                 if (top_candidates.size() < ef || lb > dcand) {
+                    IF_STATISTIC(stat, stat->update_candidat_nb++);
                     candidate_set.emplace(-dcand, candidate_id);
                     // check if candidate_id is enabled
-                    if ((!sel || sel->is_member(candidate_id)))
+                    if ((!sel || sel->is_member(candidate_id))){
+                        IF_STATISTIC(stat, stat->update_topset_nb++);
                         top_candidates.emplace(dcand, candidate_id);
-                    if (top_candidates.size() > ef)
+                    }
+                    if (top_candidates.size() > ef){
                         top_candidates.pop();
-                    if (!top_candidates.empty())
+                        IF_STATISTIC(stat, stat->swap_candidate_nb++);
+                    }
+                    if (!top_candidates.empty()){
                         lb = top_candidates.top().first;
+                    }
                 }
             }
         }
     }
-    //std::cout << "distance_compute: " << distance_compute << ", "
-    //          << "ef: " << ef << ", M: " << M
-    //          << std::endl;
     visited_list_pool->releaseVisitedList(vl);
     return top_candidates;
 }
@@ -428,7 +441,8 @@ void HNSWfast::searchKnn(
         int k,
         idx_t* I,
         float* D,
-        const SearchParametersHNSW* param) const {
+        const SearchParametersHNSW* param,
+        HnswSearchStatisitc* stat) const {
     if (levels.size() == 0)
         return;
     int ep = entry_point;
@@ -459,7 +473,7 @@ void HNSWfast::searchKnn(
     }
     std::priority_queue<Node, std::vector<Node>, CompareByFirst>
             top_candidates = search_base_layer(
-                    qdis, ep, std::max(ef_search, k), dist, param);
+                    qdis, ep, std::max(ef_search, k), dist, param, stat);
     while (top_candidates.size() > k)
         top_candidates.pop();
     int rst_num = top_candidates.size();
