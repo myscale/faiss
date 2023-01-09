@@ -15,6 +15,7 @@
 #include <sstream>
 #include <string>
 #include <typeinfo>
+#include <SearchIndexCommon.h>
 
 #define FAISS_VERSION_MAJOR 1
 #define FAISS_VERSION_MINOR 7
@@ -52,6 +53,7 @@ struct DistanceComputer;
 struct SearchParameters {
     /// if non-null, only these IDs will be considered during search.
     IDSelector* sel = nullptr;
+    Search::QueryStats * stats = nullptr;
     /// make sure we can dynamic_cast this
     virtual ~SearchParameters() {}
 };

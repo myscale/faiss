@@ -274,9 +274,10 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
                 storage_idx_t nearest,
                 storage_idx_t ef,
                 float d_nearest,
-                const SearchParametersHNSW* param,
-                Search::QueryStats* stat) const {
+                const SearchParametersHNSW* param
+                ) const {
     const IDSelector* sel = param ? param->sel : nullptr;
+    Search::QueryStats* stat = param->stats;
     VisitedList* vl = visited_list_pool->getFreeVisitedList();
     vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
@@ -440,8 +441,7 @@ void HNSWfast::searchKnn(
         int k,
         idx_t* I,
         float* D,
-        const SearchParametersHNSW* param,
-        Search::QueryStats* stat) const {
+        const SearchParametersHNSW* param) const {
     if (levels.size() == 0)
         return;
     int ep = entry_point;
@@ -472,7 +472,7 @@ void HNSWfast::searchKnn(
     }
     std::priority_queue<Node, std::vector<Node>, CompareByFirst>
             top_candidates = search_base_layer(
-                    qdis, ep, std::max(ef_search, k), dist, param, stat);
+                    qdis, ep, std::max(ef_search, k), dist, param);
     while (top_candidates.size() > k)
         top_candidates.pop();
     int rst_num = top_candidates.size();

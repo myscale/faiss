@@ -236,8 +236,7 @@ class HNSWfast {
             storage_idx_t nearest,
             storage_idx_t ef,
             float d_nearest,
-            const SearchParametersHNSW* param,
-            Search::QueryStats* stat) const;
+            const SearchParametersHNSW* param) const;
 
     int make_connection(
             DistanceComputer& ptdis,
@@ -258,7 +257,7 @@ class HNSWfast {
             int k,
             idx_t* I,
             float* D,
-            const SearchParametersHNSW* param = nullptr, Search::QueryStats* stat = nullptr) const;
+            const SearchParametersHNSW* param = nullptr) const;
 
     HNSWfast& operator=(const HNSWfast& rhs) {
         return *this;
