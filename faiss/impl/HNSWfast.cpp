@@ -7,6 +7,7 @@
 #include <faiss/impl/DistanceComputer.h>
 
 #include <iostream>
+#include <SearchIndexCommon.h>
 
 namespace faiss {
 
@@ -274,7 +275,7 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
                 storage_idx_t ef,
                 float d_nearest,
                 const SearchParametersHNSW* param,
-                HnswSearchStatisitc* stat) const {
+                Search::QueryStats* stat) const {
     const IDSelector* sel = param ? param->sel : nullptr;
     VisitedList* vl = visited_list_pool->getFreeVisitedList();
     vl_type* visited_array = vl->mass;
@@ -302,23 +303,21 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
         int cur_id = currNode.second;
         int* cur_link = get_neighbor_link(cur_id, 0);
         auto cur_neighbor_num = get_neighbors_num(cur_link);
+        IF_STATISTIC(stat, stat->n_hops++);
         for (auto i = 1; i <= cur_neighbor_num; ++i) {
             int candidate_id = cur_link[i];
             if (visited_array[candidate_id] != visited_array_tag) {
                 visited_array[candidate_id] = visited_array_tag;
                 float dcand = ptdis(candidate_id);
-                IF_STATISTIC(stat, stat->cmp_nb++);
+                IF_STATISTIC(stat, stat->n_cmps++);
                 if (top_candidates.size() < ef || lb > dcand) {
-                    IF_STATISTIC(stat, stat->update_candidat_nb++);
                     candidate_set.emplace(-dcand, candidate_id);
                     // check if candidate_id is enabled
                     if ((!sel || sel->is_member(candidate_id))){
-                        IF_STATISTIC(stat, stat->update_topset_nb++);
                         top_candidates.emplace(dcand, candidate_id);
                     }
                     if (top_candidates.size() > ef){
                         top_candidates.pop();
-                        IF_STATISTIC(stat, stat->swap_candidate_nb++);
                     }
                     if (!top_candidates.empty()){
                         lb = top_candidates.top().first;
@@ -442,7 +441,7 @@ void HNSWfast::searchKnn(
         idx_t* I,
         float* D,
         const SearchParametersHNSW* param,
-        HnswSearchStatisitc* stat) const {
+        Search::QueryStats* stat) const {
     if (levels.size() == 0)
         return;
     int ep = entry_point;
