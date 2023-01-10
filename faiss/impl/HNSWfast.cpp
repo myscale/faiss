@@ -260,14 +260,6 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
     return top_candidates;
 }
 
-#define ENABLE_STAT
-#ifdef ENABLE_STAT
-#define IF_STATISTIC(stat, inc_stat) \
-    if(stat) { \
-        inc_stat; \
-    }
-#endif
-
 std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
         search_base_layer(
                 DistanceComputer& ptdis,
@@ -277,11 +269,11 @@ std::priority_queue<Node, std::vector<Node>, CompareByFirst> HNSWfast::
                 const SearchParametersHNSW* param
                 ) const {
     const IDSelector* sel = param ? param->sel : nullptr;
-    Search::QueryStats* stat = param->stats;
+    Search::QueryStats* stat = param ? param->stats : nullptr;
     VisitedList* vl = visited_list_pool->getFreeVisitedList();
     vl_type* visited_array = vl->mass;
     vl_type visited_array_tag = vl->curV;
-
+    IF_STATISTIC(stat, stat->num_queries++);
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> top_candidates;
     std::priority_queue<Node, std::vector<Node>, CompareByFirst> candidate_set;
 

@@ -21,6 +21,14 @@
 #include <faiss/utils/Heap.h>
 #include <faiss/utils/random.h>
 
+#define ENABLE_STAT
+#ifdef ENABLE_STAT
+#define IF_STATISTIC(stat, inc_stat) \
+    if(stat) { \
+        inc_stat; \
+    }
+#endif
+
 namespace faiss {
 
 /** Implementation of the Hierarchical Navigable Small World
