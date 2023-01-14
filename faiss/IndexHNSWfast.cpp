@@ -551,7 +551,7 @@ IndexHNSWfastFlat::IndexHNSWfastFlat() {
 }
 
 IndexHNSWfastFlat::IndexHNSWfastFlat(int d, int M, MetricType metric)
-        : IndexHNSWfast(new IndexFlat(d, metric), M) {
+        : IndexHNSWfast(new IndexFlat(d, 0, metric), M) {
     own_fields = true;
     is_trained = true;
 }
