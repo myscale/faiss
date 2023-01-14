@@ -536,7 +536,7 @@ int search_from_candidates(
                                : hnsw.check_relative_distance;
     int efSearch = params ? params->efSearch : hnsw.efSearch;
     const IDSelector* sel = params ? params->sel : nullptr;
-
+    Search::QueryStats* stat = params ? params->stats : nullptr;
     for (int i = 0; i < candidates.size(); i++) {
         idx_t v1 = candidates.ids[i];
         float d = candidates.dis[i];
@@ -570,7 +570,7 @@ int search_from_candidates(
 
         size_t begin, end;
         hnsw.neighbor_range(v0, level, &begin, &end);
-
+        IF_STATISTIC(stat, stat->n_hops++);
         for (size_t j = begin; j < end; j++) {
             int v1 = hnsw.neighbors[j];
             if (v1 < 0)
@@ -581,6 +581,7 @@ int search_from_candidates(
             vt.set(v1);
             ndis++;
             float d = qdis(v1);
+            IF_STATISTIC(stat, stat->n_cmps++);
             if (!sel || sel->is_member(v1)) {
                 if (nres < k) {
                     faiss::maxheap_push(++nres, D, I, d, v1);

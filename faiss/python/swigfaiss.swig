@@ -93,7 +93,8 @@ typedef uint64_t size_t;
 #include <faiss/IndexReplicas.h>
 #include <faiss/impl/HNSW.h>
 #include <faiss/IndexHNSW.h>
-
+#include <faiss/impl/HNSWfast.h>
+#include <faiss/IndexHNSWfast.h>
 #include <faiss/impl/kmeans1d.h>
 
 #include <faiss/impl/NNDescent.h>
@@ -430,6 +431,8 @@ void gpu_sync_all_devices()
 %include  <faiss/IndexIVFAdditiveQuantizer.h>
 %include  <faiss/impl/HNSW.h>
 %include  <faiss/IndexHNSW.h>
+%include  <faiss/impl/HNSWfast.h>
+%include  <faiss/IndexHNSWfast.h>
 
 %include <faiss/impl/kmeans1d.h>
 
@@ -612,6 +615,8 @@ void gpu_sync_all_devices()
     DOWNCAST ( IndexHNSWFlat )
     DOWNCAST ( IndexHNSWPQ )
     DOWNCAST ( IndexHNSWSQ )
+    DOWNCAST ( IndexHNSWfastPQ )
+    DOWNCAST ( IndexHNSWfastSQ )
     DOWNCAST ( IndexHNSW2Level )
     DOWNCAST ( IndexNNDescentFlat )
     DOWNCAST ( IndexNSGFlat )

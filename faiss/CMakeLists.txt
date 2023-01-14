@@ -20,6 +20,7 @@ set(FAISS_SRC
   IndexFlat.cpp
   IndexFlatCodes.cpp
   IndexHNSW.cpp
+  IndexHNSWfast.cpp
   IndexIDMap.cpp
   IndexIVF.cpp
   IndexIVFAdditiveQuantizer.cpp
@@ -53,6 +54,7 @@ set(FAISS_SRC
   impl/IDSelector.cpp
   impl/FaissException.cpp
   impl/HNSW.cpp
+  impl/HNSWfast.cpp
   impl/NSG.cpp
   impl/PolysemousTraining.cpp
   impl/ProductQuantizer.cpp
@@ -204,6 +206,7 @@ endif()
 set(FAISS_HEADERS ${FAISS_HEADERS} PARENT_SCOPE)
 
 add_library(faiss ${FAISS_SRC})
+target_compile_options(faiss PRIVATE -mavx2 -mfma -mf16c -mpopcnt)
 
 add_library(faiss_avx2 ${FAISS_SRC})
 if(NOT FAISS_OPT_LEVEL STREQUAL "avx2")

@@ -55,6 +55,7 @@
 #include <faiss/IndexBinaryHNSW.h>
 #include <faiss/IndexBinaryHash.h>
 #include <faiss/IndexBinaryIVF.h>
+#include <faiss/IndexHNSWfast.h>
 
 namespace faiss {
 
@@ -366,6 +367,42 @@ static void read_HNSW(HNSW* hnsw, IOReader* f) {
     READ1(hnsw->efConstruction);
     READ1(hnsw->efSearch);
     READ1(hnsw->upper_beam);
+}
+
+static void read_HNSW_fast(HNSWfast* hnswf, IOReader* f) {
+    READ1(hnswf->M)
+    READ1(hnswf->level0_link_size);
+    READ1(hnswf->link_size);
+
+    READ1(hnswf->entry_point);
+    READ1(hnswf->max_level);
+    READ1(hnswf->efConstruction);
+    READ1(hnswf->efSearch);
+
+    READ1(hnswf->has_deletion);
+    READ1(hnswf->level_constant);
+
+    READVECTOR(hnswf->levels);
+    auto ntotal = hnswf->levels.size();
+    hnswf->loaded = true;
+
+    hnswf->level_generator.seed(100);
+    if (hnswf->visited_list_pool)
+        delete hnswf->visited_list_pool;
+    hnswf->visited_list_pool = new VisitedListPool(1, ntotal);
+    hnswf->init_link_list_lock(hnswf->levels.size());
+
+    hnswf->level0_links = (char*)malloc(ntotal * hnswf->level0_link_size);
+    READANDCHECK(hnswf->level0_links, ntotal * hnswf->level0_link_size);
+    hnswf->linkLists = (char**)malloc(ntotal * sizeof(void*));
+    for (auto i = 0; i < ntotal; ++i) {
+        if (hnswf->levels[i]) {
+            hnswf->linkLists[i] =
+                    (char*)malloc(hnswf->link_size * hnswf->levels[i]);
+            READANDCHECK(
+                    hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
+        }
+    }
 }
 
 static void read_NSG(NSG* nsg, IOReader* f) {
@@ -939,6 +976,27 @@ Index* read_index(IOReader* f, int io_flags) {
         }
         idx = idxhnsw;
     } else if (
+            h == fourcc("IHFf") || h == fourcc("IHFp") || h == fourcc("IHFs") ||
+            h == fourcc("IHF2")) {
+        IndexHNSWfast* idxhnswfast = nullptr;
+        if (h == fourcc("IHFf"))
+            idxhnswfast = new IndexHNSWfastFlat();
+        if (h == fourcc("IHFp"))
+            idxhnswfast = new IndexHNSWfastPQ();
+        if (h == fourcc("IHFs"))
+            idxhnswfast = new IndexHNSWfastSQ();
+        if (h == fourcc("IHF2"))
+            idxhnswfast = new IndexHNSWfast2Level();
+        read_index_header(idxhnswfast, f);
+        read_HNSW_fast(&idxhnswfast->hnsw, f);
+        idxhnswfast->storage = read_index(f, io_flags);
+        idxhnswfast->own_fields = true;
+        if (h == fourcc("IHFp")) {
+            dynamic_cast<IndexPQ*>(idxhnswfast->storage)
+                    ->pq.compute_sdc_table();
+        }
+        idx = idxhnswfast;
+    } else if (
             h == fourcc("INSf") || h == fourcc("INSp") || h == fourcc("INSs")) {
         IndexNSG* idxnsg;
         if (h == fourcc("INSf"))
@@ -1021,6 +1079,7 @@ Index* read_index(IOReader* f, int io_flags) {
 
         idx = imm;
     } else {
+        std::cout << "h " << h << std::endl;
         FAISS_THROW_FMT(
                 "Index type 0x%08x (\"%s\") not recognized",
                 h,
