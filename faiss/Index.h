@@ -15,7 +15,7 @@
 #include <sstream>
 #include <string>
 #include <typeinfo>
-#include <SearchIndexCommon.h>
+#include <SearchIndex/SearchIndexCommon.h>
 
 #define FAISS_VERSION_MAJOR 1
 #define FAISS_VERSION_MINOR 7

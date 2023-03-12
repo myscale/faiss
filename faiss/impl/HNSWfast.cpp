@@ -7,7 +7,7 @@
 #include <faiss/impl/DistanceComputer.h>
 
 #include <iostream>
-#include <SearchIndexCommon.h>
+#include <SearchIndex/SearchIndexCommon.h>
 
 namespace faiss {
 
