@@ -780,7 +780,7 @@ void fvec_inner_products_by_idx(
         size_t d,
         size_t nx,
         size_t ny) {
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int64_t j = 0; j < nx; j++) {
         const int64_t* __restrict idsj = ids + j * ny;
         const float* xj = x + j * d;
@@ -803,7 +803,7 @@ void fvec_L2sqr_by_idx(
         size_t d,
         size_t nx,
         size_t ny) {
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int64_t j = 0; j < nx; j++) {
         const int64_t* __restrict idsj = ids + j * ny;
         const float* xj = x + j * d;
