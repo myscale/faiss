@@ -377,9 +377,9 @@ struct InvertedListScanner {
     const IDSelector* sel;
 
     InvertedListScanner(
-            bool store_pairs = false,
-            const IDSelector* sel = nullptr)
-            : store_pairs(store_pairs), sel(sel) {}
+            bool _store_pairs = false,
+            const IDSelector* _sel = nullptr)
+            : store_pairs(_store_pairs), sel(_sel) {}
 
     /// used in default implementation of scan_codes
     size_t code_size = 0;

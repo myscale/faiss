@@ -117,7 +117,7 @@ struct IDSelectorBitmap : IDSelector {
 /** reverts the membership test of another selector */
 struct IDSelectorNot : IDSelector {
     const IDSelector* sel;
-    IDSelectorNot(const IDSelector* sel) : sel(sel) {}
+    IDSelectorNot(const IDSelector* _sel) : sel(_sel) {}
     bool is_member(idx_t id) const final {
         return !sel->is_member(id);
     }
@@ -126,7 +126,7 @@ struct IDSelectorNot : IDSelector {
 
 /// selects all entries (useful for benchmarking)
 struct IDSelectorAll : IDSelector {
-    bool is_member(idx_t id) const final {
+    bool is_member(idx_t /* id */) const final {
         return true;
     }
     virtual ~IDSelectorAll() {}

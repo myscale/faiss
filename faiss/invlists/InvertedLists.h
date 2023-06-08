@@ -148,8 +148,8 @@ struct InvertedLists {
         const idx_t* ids;
         size_t list_no;
 
-        ScopedIds(const InvertedLists* il, size_t list_no)
-                : il(il), ids(il->get_ids(list_no)), list_no(list_no) {}
+        ScopedIds(const InvertedLists* _il, size_t _list_no)
+                : il(_il), ids(_il->get_ids(_list_no)), list_no(_list_no) {}
 
         const idx_t* get() {
             return ids;
@@ -169,13 +169,13 @@ struct InvertedLists {
         const uint8_t* codes;
         size_t list_no;
 
-        ScopedCodes(const InvertedLists* il, size_t list_no)
-                : il(il), codes(il->get_codes(list_no)), list_no(list_no) {}
+        ScopedCodes(const InvertedLists* _il, size_t _list_no)
+                : il(_il), codes(il->get_codes(_list_no)), list_no(_list_no) {}
 
-        ScopedCodes(const InvertedLists* il, size_t list_no, size_t offset)
-                : il(il),
-                  codes(il->get_single_code(list_no, offset)),
-                  list_no(list_no) {}
+        ScopedCodes(const InvertedLists* _il, size_t _list_no, size_t offset)
+                : il(_il),
+                  codes(_il->get_single_code(_list_no, offset)),
+                  list_no(_list_no) {}
 
         const uint8_t* get() {
             return codes;
@@ -225,8 +225,8 @@ struct ArrayInvertedLists : InvertedLists {
 
 /// invlists that fail for all write functions
 struct ReadOnlyInvertedLists : InvertedLists {
-    ReadOnlyInvertedLists(size_t nlist, size_t code_size)
-            : InvertedLists(nlist, code_size) {}
+    ReadOnlyInvertedLists(size_t _nlist, size_t _code_size)
+            : InvertedLists(_nlist, _code_size) {}
 
     size_t add_entries(
             size_t list_no,

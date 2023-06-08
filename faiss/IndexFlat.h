@@ -54,10 +54,10 @@ struct IndexFlat : IndexFlatCodes {
 
     // get pointer to the floating point data
     float* get_xb() {
-        return (float*)codes.data();
+        return reinterpret_cast<float*>(codes.data());
     }
     const float* get_xb() const {
-        return (const float*)codes.data();
+        return reinterpret_cast<const float*>(codes.data());
     }
 
     IndexFlat() {}
@@ -76,12 +76,12 @@ protected:
 };
 
 struct IndexFlatIP : IndexFlat {
-    explicit IndexFlatIP(idx_t d) : IndexFlat(d, METRIC_INNER_PRODUCT) {}
+    explicit IndexFlatIP(idx_t _d) : IndexFlat(_d, METRIC_INNER_PRODUCT) {}
     IndexFlatIP() {}
 };
 
 struct IndexFlatL2 : IndexFlat {
-    explicit IndexFlatL2(idx_t d) : IndexFlat(d, METRIC_L2) {}
+    explicit IndexFlatL2(idx_t _d) : IndexFlat(_d, METRIC_L2) {}
     IndexFlatL2() {}
 };
 
