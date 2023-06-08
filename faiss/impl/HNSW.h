@@ -78,7 +78,7 @@ struct HNSW {
         std::vector<float> dis;
         typedef faiss::CMax<float, storage_idx_t> HC;
 
-        explicit MinimaxHeap(int n) : n(n), k(0), nvalid(0), ids(n), dis(n) {}
+        explicit MinimaxHeap(int _n) : n(_n), k(0), nvalid(0), ids(_n), dis(_n) {}
 
         void push(storage_idx_t i, float v);
 
@@ -97,7 +97,7 @@ struct HNSW {
     struct NodeDistCloser {
         float d;
         int id;
-        NodeDistCloser(float d, int id) : d(d), id(id) {}
+        NodeDistCloser(float _d, int _id) : d(_d), id(_id) {}
         bool operator<(const NodeDistCloser& obj1) const {
             return d < obj1.d;
         }
@@ -106,7 +106,7 @@ struct HNSW {
     struct NodeDistFarther {
         float d;
         int id;
-        NodeDistFarther(float d, int id) : d(d), id(id) {}
+        NodeDistFarther(float _d, int _id) : d(_d), id(_id) {}
         bool operator<(const NodeDistFarther& obj1) const {
             return d > obj1.d;
         }
@@ -245,12 +245,12 @@ struct HNSWStats {
     size_t nreorder;
 
     HNSWStats(
-            size_t n1 = 0,
-            size_t n2 = 0,
-            size_t n3 = 0,
-            size_t ndis = 0,
-            size_t nreorder = 0)
-            : n1(n1), n2(n2), n3(n3), ndis(ndis), nreorder(nreorder) {}
+            size_t _n1 = 0,
+            size_t _n2 = 0,
+            size_t _n3 = 0,
+            size_t _ndis = 0,
+            size_t _nreorder = 0)
+            : n1(_n1), n2(_n2), n3(_n3), ndis(_ndis), nreorder(_nreorder) {}
 
     void reset() {
         n1 = n2 = n3 = 0;

@@ -45,7 +45,7 @@ void handleExceptions(
 template <class T>
 struct ScopeDeleter {
     const T* ptr;
-    explicit ScopeDeleter(const T* ptr = nullptr) : ptr(ptr) {}
+    explicit ScopeDeleter(const T* _ptr = nullptr) : ptr(_ptr) {}
     void release() {
         ptr = nullptr;
     }
@@ -64,7 +64,7 @@ struct ScopeDeleter {
 template <class T>
 struct ScopeDeleter1 {
     const T* ptr;
-    explicit ScopeDeleter1(const T* ptr = nullptr) : ptr(ptr) {}
+    explicit ScopeDeleter1(const T* _ptr = nullptr) : ptr(_ptr) {}
     void release() {
         ptr = nullptr;
     }

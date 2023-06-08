@@ -159,7 +159,7 @@ struct IndexHNSWfast2Level : IndexHNSWfast {
             idx_t k,
             float* distances,
             idx_t* labels,
-            const SearchParameters* params_in) const;
+            const SearchParameters* params_in) const override;
 };
 
 } // namespace faiss

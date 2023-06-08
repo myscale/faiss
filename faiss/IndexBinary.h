@@ -48,14 +48,14 @@ struct IndexBinary {
     /// type of metric this index uses for search
     MetricType metric_type;
 
-    explicit IndexBinary(idx_t d = 0, MetricType metric = METRIC_L2)
-            : d(d),
-              code_size(d / 8),
+    explicit IndexBinary(idx_t _d = 0, MetricType metric = METRIC_L2)
+            : d(_d),
+              code_size(_d / 8),
               ntotal(0),
               verbose(false),
               is_trained(true),
               metric_type(metric) {
-        FAISS_THROW_IF_NOT(d % 8 == 0);
+        FAISS_THROW_IF_NOT(_d % 8 == 0);
     }
 
     virtual ~IndexBinary();

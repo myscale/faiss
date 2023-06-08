@@ -46,8 +46,8 @@ struct FlatCodesDistanceComputer : DistanceComputer {
     const uint8_t* codes;
     size_t code_size;
 
-    FlatCodesDistanceComputer(const uint8_t* codes, size_t code_size)
-            : codes(codes), code_size(code_size) {}
+    FlatCodesDistanceComputer(const uint8_t* _codes, size_t _code_size)
+            : codes(_codes), code_size(_code_size) {}
 
     FlatCodesDistanceComputer() : codes(nullptr), code_size(0) {}
 

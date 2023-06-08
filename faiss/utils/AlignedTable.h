@@ -20,7 +20,7 @@ namespace faiss {
 
 template <int A = 32>
 inline bool is_aligned_pointer(const void* x) {
-    size_t xi = (size_t)x;
+    size_t xi = reinterpret_cast<size_t>(x);
     return xi % A == 0;
 }
 
@@ -47,7 +47,7 @@ struct AlignedTableTightAlloc {
         }
         T* new_ptr;
         if (n > 0) {
-            int ret = posix_memalign((void**)&new_ptr, A, n * sizeof(T));
+            int ret = posix_memalign(reinterpret_cast<void**>(&new_ptr), A, n * sizeof(T));
             if (ret != 0) {
                 throw std::bad_alloc();
             }

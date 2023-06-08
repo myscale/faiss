@@ -67,7 +67,7 @@ class HNSWfast {
         std::vector<float> dis;
         typedef faiss::CMax<float, storage_idx_t> HC;
 
-        explicit MinimaxHeap(int n) : n(n), k(0), nvalid(0), ids(n), dis(n) {}
+        explicit MinimaxHeap(int _n) : n(_n), k(0), nvalid(0), ids(_n), dis(_n) {}
 
         void push(storage_idx_t i, float v) {
             if (k == n) {
@@ -138,7 +138,7 @@ class HNSWfast {
     struct NodeDistCloser {
         float d;
         int id;
-        NodeDistCloser(float d, int id) : d(d), id(id) {}
+        NodeDistCloser(float _d, int _id) : d(_d), id(_id) {}
         bool operator<(const NodeDistCloser& obj1) const {
             return d < obj1.d;
         }
@@ -147,7 +147,7 @@ class HNSWfast {
     struct NodeDistFarther {
         float d;
         int id;
-        NodeDistFarther(float d, int id) : d(d), id(id) {}
+        NodeDistFarther(float _d, int _id) : d(_d), id(_id) {}
         bool operator<(const NodeDistFarther& obj1) const {
             return d > obj1.d;
         }
@@ -192,14 +192,14 @@ class HNSWfast {
     /// range of entries in the neighbors table of vertex no at layer_no
     storage_idx_t* get_neighbor_link(idx_t no, int layer_no) const {
         return layer_no == 0
-                ? (int*)(level0_links + no * level0_link_size)
-                : (int*)(linkLists[no] + (layer_no - 1) * link_size);
+                ? reinterpret_cast<int*>(level0_links + no * level0_link_size)
+                : reinterpret_cast<int*>(linkLists[no] + (layer_no - 1) * link_size);
     }
     unsigned short int get_neighbors_num(int* p) const {
-        return *((unsigned short int*)p);
+        return *(reinterpret_cast<unsigned short int*>(p));
     }
     void set_neighbors_num(int* p, unsigned short int num) const {
-        *((unsigned short int*)(p)) = *((unsigned short int*)(&num));
+        *(reinterpret_cast<unsigned short int*>(p)) = *(reinterpret_cast<unsigned short int*>(&num));
     }
 
     /// only mandatory parameter: nb of neighbors
@@ -211,7 +211,7 @@ class HNSWfast {
     int random_level(double arg) {
         std::uniform_real_distribution<double> distribution(0.0, 1.0);
         double r = -log(distribution(level_generator)) * arg;
-        return (int)r;
+        return static_cast<int>(r);
     }
 
     void dump_level0(int current);
@@ -259,7 +259,7 @@ class HNSWfast {
             float* D,
             const SearchParametersHNSW* param = nullptr) const;
 
-    HNSWfast& operator=(const HNSWfast& rhs) {
+    HNSWfast& operator=(const HNSWfast& /* rhs */) {
         return *this;
     }
 
