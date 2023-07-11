@@ -24,7 +24,6 @@ HNSWfast::HNSWfast(int M) : M(M), rng(100) {
     level0_link_size = sizeof(int) * ((M << 1) | 1);
     link_size = sizeof(int) * (M + 1);
     level0_links = nullptr;
-    linkLists = nullptr;
     level_constant = 1 / log(1.0 * M);
     visited_list_pool = nullptr;
 }
@@ -42,101 +41,40 @@ void HNSWfast::init(int ntotal) {
         levels[i] = pt_level;
     }
 
-    level0_links = (char*)malloc(level0_link_size * ntotal);
-    if (level0_links == nullptr)
-        throw std::runtime_error("No enough memory 4 level0_links!");
-    memset(level0_links, 0, ntotal * level0_link_size);
+    level0_storage.resize(level0_link_size * ntotal, 0);
+    level0_links = level0_storage.data();
 
-    linkLists = (char**)malloc(sizeof(void*) * ntotal);
-    if (linkLists == nullptr)
-        throw std::runtime_error("No enough memory 4 level0_links_new!");
-    memset(linkLists, 0, ntotal * sizeof(void*));
+    link_storage.resize(ntotal);
+    linkLists.resize(ntotal, 0);
 
     for (int i = 0; i < ntotal; i++) {
         int pt_level = levels[i];
         if (pt_level > max_level)
             max_level = pt_level;
         if (pt_level) {
-            linkLists[i] = (char*)malloc(link_size * pt_level);
-            if (linkLists[i] == nullptr) {
-                throw std::runtime_error("No enough memory 4 linkLists!");
-            }
-            memset(linkLists[i], 0, link_size * pt_level);
+            link_storage[i].resize(link_size * pt_level, 0);
+            linkLists[i] = link_storage[i].data();
         }
     }
 }
 
 HNSWfast::~HNSWfast() {
-    for (auto i = 0; i < levels.size(); ++i) {
-        if (levels[i])
-            free(linkLists[i]);
+    if (visited_list_pool) {
+        delete visited_list_pool;
     }
-    free(level0_links);
-    free(linkLists);
-    delete visited_list_pool;
 }
 
 void HNSWfast::reset() {
     max_level = -1;
     entry_point = -1;
-    free(level0_links);
+    level0_storage.clear();
     for (auto i = 0; i < levels.size(); ++i) {
-        if (levels[i])
-            free(linkLists[i]);
+        link_storage[i].clear();
     }
-    free(linkLists);
     levels.clear();
     level0_links = nullptr;
-    linkLists = nullptr;
+    linkLists.clear();
     level_constant = 1 / log(1.0 * M);
-}
-
-int HNSWfast::prepare_level_tab(size_t n, bool preset_levels) {
-    size_t n0 = levels.size();
-    size_t n1 = n0 + n;
-
-    if (preset_levels) {
-        FAISS_ASSERT(n1 == levels.size());
-    } else {
-        levels.resize(n1);
-        for (int i = 0; i < n; i++) {
-            int pt_level = random_level(level_constant);
-            levels[n0 + i] = pt_level;
-        }
-    }
-
-    char* level0_links_new =
-            (char*)realloc(level0_links, level0_link_size * n1);
-    if (level0_links_new == nullptr)
-        throw std::runtime_error("No enough memory 4 level0_links!");
-    level0_links = level0_links_new;
-    memset(level0_links + n0 * level0_link_size, 0, n * level0_link_size);
-
-    char** linkLists_new = (char**)realloc(linkLists, sizeof(void*) * n1);
-    if (linkLists_new == nullptr)
-        throw std::runtime_error("No enough memory 4 level0_links_new!");
-    linkLists = linkLists_new;
-    memset(linkLists + n0 * sizeof(void*), 0, n * sizeof(void*));
-
-    int debug_space = 0;
-    for (int i = 0; i < n; i++) {
-        int pt_level = levels[i + n0];
-        if (pt_level > max_level)
-            max_level = pt_level;
-        if (pt_level) {
-            linkLists[n0 + i] = (char*)malloc(link_size * pt_level);
-            if (linkLists[n0 + i] == nullptr) {
-                throw std::runtime_error("No enough memory 4 linkLists!");
-            }
-            memset(linkLists[n0 + i], 0, link_size * pt_level);
-        }
-    }
-
-    //    std::vector<std::mutex>(n0 + n).swap(link_list_locks);
-    //    if (visited_list_pool) delete visited_list_pool;
-    //    visited_list_pool = new VisitedListPool(1, n1);
-
-    return max_level;
 }
 
 void HNSWfast::dump_level0(int current) {
@@ -329,9 +267,9 @@ int HNSWfast::make_connection(
         std::priority_queue<Node, std::vector<Node>, CompareByFirst>& cand,
         int level) {
     int maxM = level ? M : M << 1;
-    int* selectedNeighbors = (int*)malloc(sizeof(int) * maxM);
+    std::vector<int> selectedNeighbors(maxM);
     int selectedNeighborsNum = 0;
-    prune_neighbors(ptdis, cand, M, selectedNeighbors, selectedNeighborsNum);
+    prune_neighbors(ptdis, cand, M, selectedNeighbors.data(), selectedNeighborsNum);
     if (selectedNeighborsNum > M)
         throw std::runtime_error(
                 "Wrong size of candidates returned by prune_neighbors!");
@@ -383,7 +321,6 @@ int HNSWfast::make_connection(
         }
     }
 
-    free(selectedNeighbors);
     return next_closest_entry_point;
 }
 

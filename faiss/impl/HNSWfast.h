@@ -172,8 +172,10 @@ class HNSWfast {
     /// maximum level
     int max_level;
     int M;
+    std::vector<char> level0_storage;
+    std::vector<std::vector<char>> link_storage;
     char* level0_links;
-    char** linkLists;
+    std::vector<char*> linkLists;
     size_t level0_link_size;
     size_t link_size;
     double level_constant;
@@ -217,8 +219,6 @@ class HNSWfast {
     void dump_level0(int current);
 
     void reset();
-
-    int prepare_level_tab(size_t n, bool preset_levels = false);
 
     // re-implementations inspired by hnswlib
     /** add point pt_id on all levels <= pt_level and build the link

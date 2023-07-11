@@ -392,13 +392,15 @@ static void read_HNSW_fast(HNSWfast* hnswf, IOReader* f) {
     hnswf->visited_list_pool = new VisitedListPool(1, ntotal);
     hnswf->init_link_list_lock(hnswf->levels.size());
 
-    hnswf->level0_links = (char*)malloc(ntotal * hnswf->level0_link_size);
+    hnswf->level0_storage.resize(ntotal * hnswf->level0_link_size);
+    hnswf->level0_links = hnswf->level0_storage.data();
     READANDCHECK(hnswf->level0_links, ntotal * hnswf->level0_link_size);
-    hnswf->linkLists = (char**)malloc(ntotal * sizeof(void*));
+    hnswf->linkLists.resize(ntotal);
+    hnswf->link_storage.resize(ntotal);
     for (auto i = 0; i < ntotal; ++i) {
         if (hnswf->levels[i]) {
-            hnswf->linkLists[i] =
-                    (char*)malloc(hnswf->link_size * hnswf->levels[i]);
+            hnswf->link_storage[i].resize(hnswf->link_size * hnswf->levels[i]);
+            hnswf->linkLists[i] = hnswf->link_storage[i].data();
             READANDCHECK(
                     hnswf->linkLists[i], hnswf->link_size * hnswf->levels[i]);
         }
