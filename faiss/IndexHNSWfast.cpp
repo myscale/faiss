@@ -121,7 +121,6 @@ void hnsw_add_vertices(
         return;
     }
 
-    // int max_level = hnsw.prepare_level_tab(n, preset_levels);
     int max_level = hnsw.max_level;
 
     if (verbose) {
