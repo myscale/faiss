@@ -81,7 +81,7 @@ struct Index {
     float metric_arg; ///< argument of the metric type
 
     explicit Index(idx_t _d = 0, MetricType metric = METRIC_L2)
-            : d(_d),
+            : d(static_cast<int>(_d)),
               ntotal(0),
               verbose(false),
               is_trained(true),

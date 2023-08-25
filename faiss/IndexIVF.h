@@ -70,7 +70,7 @@ struct SearchParametersIVF : SearchParameters {
     SearchParameters* quantizer_params = nullptr;
 
     SearchParametersIVF() : nprobe(1), max_codes(0) {}
-    virtual ~SearchParametersIVF() {}
+    virtual ~SearchParametersIVF() override {}
 };
 
 // the new convention puts the index type after SearchParameters
@@ -198,7 +198,7 @@ struct IndexIVF : Index, Level1Quantizer {
      * @param assign coarse quantization indices, size nx * nprobe
      * @param centroid_dis
      *               distances to coarse centroids, size nx * nprobe
-     * @param distance
+     * @param distances
      *               output distances, size n * k
      * @param labels output labels, size n * k
      * @param store_pairs store inv list index + inv list offset

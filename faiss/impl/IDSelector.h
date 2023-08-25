@@ -89,7 +89,7 @@ struct IDSelectorBatch : IDSelector {
     /** Construct with an array of ids to process
      *
      * @param n number of ids to store
-     * @param ids elements to store. The pointer can be released after
+     * @param indices elements to store. The pointer can be released after
      *            construction
      */
     IDSelectorBatch(size_t n, const idx_t* indices);
@@ -121,7 +121,7 @@ struct IDSelectorNot : IDSelector {
     bool is_member(idx_t id) const final {
         return !sel->is_member(id);
     }
-    virtual ~IDSelectorNot() {}
+    virtual ~IDSelectorNot() override {}
 };
 
 /// selects all entries (useful for benchmarking)
@@ -129,7 +129,7 @@ struct IDSelectorAll : IDSelector {
     bool is_member(idx_t /* id */) const final {
         return true;
     }
-    virtual ~IDSelectorAll() {}
+    virtual ~IDSelectorAll() override {}
 };
 
 } // namespace faiss

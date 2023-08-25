@@ -91,8 +91,8 @@ size_t ranklist_intersection_size(
 
 /** merge a result table into another one
  *
- * @param I0, D0       first result table, size (n, k)
- * @param I1, D1       second result table, size (n, k)
+ * @param I0 D0        first result table, size (n, k)
+ * @param I1 D1        second result table, size (n, k)
  * @param keep_min     if true, keep min values, otherwise keep max
  * @param translation  add this value to all I1's indexes
  * @return             nb of values that were taken from the second table

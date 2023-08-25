@@ -95,7 +95,7 @@ struct IndexBinaryIVF : IndexBinary {
      * @param assign coarse quantization indices, size nx * nprobe
      * @param centroid_dis
      *               distances to coarse centroids, size nx * nprobe
-     * @param distance
+     * @param distances
      *               output distances, size n * k
      * @param labels output labels, size n * k
      * @param store_pairs store inv list index + inv list offset

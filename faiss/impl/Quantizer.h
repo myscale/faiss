@@ -32,7 +32,7 @@ struct Quantizer {
 
     /** Decode a set of vectors
      *
-     * @param codes    input codes, size n * code_size
+     * @param code    input codes, size n * code_size
      * @param x        output vectors, size n * d
      */
     virtual void decode(const uint8_t* code, float* x, size_t n) const = 0;

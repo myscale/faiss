@@ -95,8 +95,8 @@ struct RangeSearchPartialResult;
 /// result structure for a single query
 struct RangeQueryResult {
     using idx_t = Index::idx_t;
-    idx_t qno;   //< id of the query
-    size_t nres; //< nb of results for this query
+    idx_t qno;   ///< id of the query
+    size_t nres; ///< nb of results for this query
     RangeSearchPartialResult* pres;
 
     /// called by search function to report a new result
