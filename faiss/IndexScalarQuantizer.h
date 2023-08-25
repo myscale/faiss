@@ -29,8 +29,6 @@ struct IndexScalarQuantizer : IndexFlatCodes {
     /** Constructor.
      *
      * @param d      dimensionality of the input vectors
-     * @param M      number of subquantizers
-     * @param nbits  number of bit per subvector index
      */
     IndexScalarQuantizer(
             int d,

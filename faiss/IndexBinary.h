@@ -49,8 +49,8 @@ struct IndexBinary {
     MetricType metric_type;
 
     explicit IndexBinary(idx_t _d = 0, MetricType metric = METRIC_L2)
-            : d(_d),
-              code_size(_d / 8),
+            : d(static_cast<int>(_d)),
+              code_size(static_cast<int>(_d / 8)),
               ntotal(0),
               verbose(false),
               is_trained(true),

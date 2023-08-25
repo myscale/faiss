@@ -82,7 +82,7 @@ struct ScalarQuantizer : Quantizer {
 
     /** Decode a set of vectors
      *
-     * @param codes  codes to decode, size n * code_size
+     * @param code  codes to decode, size n * code_size
      * @param x      output vectors, size n * d
      */
     void decode(const uint8_t* code, float* x, size_t n) const override;

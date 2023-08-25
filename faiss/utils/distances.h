@@ -44,7 +44,7 @@ float fvec_Linf(const float* x, const float* y, size_t d);
  * @param xq    query vectors (size nq * d)
  * @param xb    database vectors (size nb * d)
  * @param dis   output distances (size nq * nb)
- * @param ldq,ldb, ldd strides for the matrices
+ * @param ldq ldb ldd strides for the matrices
  */
 void pairwise_L2sqr(
         int64_t d,
@@ -303,7 +303,6 @@ void knn_L2sqr(
  * @param x    query vectors, size nx * d
  * @param y    database vectors, size (max(ids) + 1) * d
  * @param ids  subset of database vectors to consider, size (nx, nsubset)
- * @param res  result structure
  * @param ld_ids stride for the ids array. -1: use nsubset, 0: all queries
  * process the same subset
  */
@@ -325,7 +324,6 @@ void knn_inner_products_by_idx(
  * @param x    query vectors, size nx * d
  * @param y    database vectors, size (max(ids) + 1) * d
  * @param subset subset of database vectors to consider, size (nx, nsubset)
- * @param res  rIDesult structure
  * @param ld_subset stride for the subset array. -1: use nsubset, 0: all queries
  * process the same subset
  */

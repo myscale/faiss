@@ -55,7 +55,7 @@ struct SearchParametersHNSW : SearchParameters {
     int efSearch = 16;
     bool check_relative_distance = true;
 
-    ~SearchParametersHNSW() {}
+    ~SearchParametersHNSW() override {}
 };
 
 struct HNSW {

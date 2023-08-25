@@ -75,12 +75,12 @@
 
 #define FAISS_THROW_FMT(FMT, ...)                              \
     do {                                                       \
-        std::string __s;                                       \
-        int __size = snprintf(nullptr, 0, FMT, __VA_ARGS__);   \
-        __s.resize(__size + 1);                                \
-        snprintf(&__s[0], __s.size(), FMT, __VA_ARGS__);       \
+        std::string s;                                         \
+        int size = snprintf(nullptr, 0, FMT, __VA_ARGS__);     \
+        s.resize(size + 1);                                    \
+        snprintf(&s[0], s.size(), FMT, __VA_ARGS__);           \
         throw faiss::FaissException(                           \
-                __s, __PRETTY_FUNCTION__, __FILE__, __LINE__); \
+                s, __PRETTY_FUNCTION__, __FILE__, __LINE__);   \
     } while (false)
 
 ///
