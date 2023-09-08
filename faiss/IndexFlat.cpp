@@ -88,7 +88,7 @@ void IndexFlat::compute_distance_subset(
 
 void IndexFlat::train(idx_t n, const float* x) {
     // resize vector size to avoid excessive memory allocation
-    this->codes.reserve(sizeof(float) * max_points);
+    this->codes.reserve(sizeof(float) * d * max_points);
 }
 
 namespace {
