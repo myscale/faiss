@@ -17,6 +17,9 @@
 #include <faiss/utils/Heap.h>
 #include <faiss/utils/random.h>
 #include <SearchIndex/VectorIndex.h>
+#ifdef MYSCALE_MODE
+#include <Common/AllocatorWithMemoryTracking.h>
+#endif
 
 namespace faiss {
 
@@ -160,7 +163,11 @@ class HNSWfast {
     };
 
     /// level of each vector (base level = 1), size = ntotal
+#ifdef MYSCALE_MODE
+    std::vector<int, AllocatorWithMemoryTracking<int>> levels;
+#else
     std::vector<int> levels;
+#endif
 
     /// entry point in the search structure (one of the points with maximum
     /// level
@@ -172,10 +179,16 @@ class HNSWfast {
     /// maximum level
     int max_level;
     int M;
+#ifdef MYSCALE_MODE
+    std::vector<char, AllocatorWithMemoryTracking<char>> level0_storage;
+    std::vector<std::vector<char, AllocatorWithMemoryTracking<char>>> link_storage;
+    std::vector<char*, AllocatorWithMemoryTracking<char*>> linkLists;
+#else
     std::vector<char> level0_storage;
     std::vector<std::vector<char>> link_storage;
-    char* level0_links;
     std::vector<char*> linkLists;
+#endif
+    char* level0_links;
     size_t level0_link_size;
     size_t link_size;
     double level_constant;
