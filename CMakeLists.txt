@@ -13,6 +13,8 @@ project(faiss
   LANGUAGES CXX)
 include(GNUInstallDirs)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast")
+
 if(CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
   # don't set these variables when used as a subproject
   set(CMAKE_CXX_STANDARD 11)
