@@ -12,6 +12,9 @@
 #include <faiss/Index.h>
 #include <faiss/impl/DistanceComputer.h>
 #include <vector>
+#ifdef MYSCALE_MODE
+#include <Common/AllocatorWithMemoryTracking.h>
+#endif
 
 namespace faiss {
 
@@ -21,7 +24,11 @@ struct IndexFlatCodes : Index {
     size_t code_size;
 
     /// encoded dataset, size ntotal * code_size
+#ifdef MYSCALE_MODE
+    std::vector<uint8_t, AllocatorWithMemoryTracking<uint8_t>> codes;
+#else
     std::vector<uint8_t> codes;
+#endif
 
     IndexFlatCodes();
 

@@ -21,6 +21,10 @@
 #include <faiss/utils/Heap.h>
 #include <faiss/utils/random.h>
 
+#ifdef MYSCALE_MODE
+#include <Common/AllocatorWithMemoryTracking.h>
+#endif
+
 #define ENABLE_STAT
 #ifdef ENABLE_STAT
 #define IF_STATISTIC(stat, inc_stat) \
@@ -113,22 +117,42 @@ struct HNSW {
     };
 
     /// assignment probability to each layer (sum=1)
+#ifdef MYSCALE_MODE
+    std::vector<double, AllocatorWithMemoryTracking<double>> assign_probas;
+#else
     std::vector<double> assign_probas;
+#endif
 
     /// number of neighbors stored per layer (cumulative), should not
     /// be changed after first add
+#ifdef MYSCALE_MODE
+    std::vector<int, AllocatorWithMemoryTracking<int>> cum_nneighbor_per_level;
+#else
     std::vector<int> cum_nneighbor_per_level;
+#endif
 
     /// level of each vector (base level = 1), size = ntotal
+#ifdef MYSCALE_MODE
+    std::vector<int, AllocatorWithMemoryTracking<int>> levels;
+#else
     std::vector<int> levels;
+#endif
 
     /// offsets[i] is the offset in the neighbors array where vector i is stored
     /// size ntotal + 1
+#ifdef MYSCALE_MODE
+    std::vector<size_t, AllocatorWithMemoryTracking<size_t>> offsets;
+#else
     std::vector<size_t> offsets;
+#endif
 
     /// neighbors[offsets[i]:offsets[i+1]] is the list of neighbors of vector i
     /// for all levels. this is where all storage goes.
+#ifdef MYSCALE_MODE
+    std::vector<storage_idx_t, AllocatorWithMemoryTracking<storage_idx_t>> neighbors;
+#else
     std::vector<storage_idx_t> neighbors;
+#endif
 
     /// entry point in the search structure (one of the points with maximum
     /// level
