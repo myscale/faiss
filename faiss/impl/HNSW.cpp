@@ -201,6 +201,7 @@ int HNSW::prepare_level_tab(size_t n, bool preset_levels) {
         FAISS_ASSERT(n0 + n == levels.size());
     } else {
         FAISS_ASSERT(n0 == levels.size());
+        levels.reserve(levels.size() + n);
         for (int i = 0; i < n; i++) {
             int pt_level = random_level();
             levels.push_back(pt_level + 1);
@@ -208,13 +209,14 @@ int HNSW::prepare_level_tab(size_t n, bool preset_levels) {
     }
 
     int max_level = 0;
+    offsets.reserve(offsets.size() + n);
     for (int i = 0; i < n; i++) {
         int pt_level = levels[i + n0] - 1;
         if (pt_level > max_level)
             max_level = pt_level;
         offsets.push_back(offsets.back() + cum_nb_neighbors(pt_level + 1));
-        neighbors.resize(offsets.back(), -1);
     }
+    neighbors.resize(offsets.back(), -1);
 
     return max_level;
 }

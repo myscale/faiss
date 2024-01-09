@@ -31,6 +31,7 @@
 #include <faiss/utils/Heap.h>
 #include <faiss/utils/hamming.h>
 #include <faiss/utils/random.h>
+#include <faiss/utils/jaccard-inl.h>
 
 namespace faiss {
 
@@ -162,11 +163,11 @@ IndexBinaryHNSW::IndexBinaryHNSW() {
     is_trained = true;
 }
 
-IndexBinaryHNSW::IndexBinaryHNSW(int d, int M)
-        : IndexBinary(d),
+IndexBinaryHNSW::IndexBinaryHNSW(int d, int M, MetricType metric)
+        : IndexBinary(d, metric),
           hnsw(M),
           own_fields(true),
-          storage(new IndexBinaryFlat(d)) {
+          storage(new IndexBinaryFlat(d, metric)) {
     is_trained = true;
 }
 
@@ -196,17 +197,14 @@ void IndexBinaryHNSW::search(
         idx_t k,
         int32_t* distances,
         idx_t* labels,
-        const SearchParameters* params) const {
-    FAISS_THROW_IF_NOT_MSG(
-            !params, "search params not supported for this index");
+        const SearchParameters* params_in) const {
     FAISS_THROW_IF_NOT(k > 0);
 
-#pragma omp parallel
+    const auto* params = dynamic_cast<const SearchParametersHNSW*>(params_in);
     {
         VisitedTable vt(ntotal);
         std::unique_ptr<DistanceComputer> dis(get_distance_computer());
 
-#pragma omp for
         for (idx_t i = 0; i < n; i++) {
             idx_t* idxi = labels + i * k;
             float* simi = (float*)(distances + i * k);
@@ -214,14 +212,9 @@ void IndexBinaryHNSW::search(
             dis->set_query((float*)(x + i * code_size));
 
             maxheap_heapify(k, simi, idxi);
-            hnsw.search(*dis, k, idxi, simi, vt);
+            hnsw.search(*dis, k, idxi, simi, vt, params);
             maxheap_reorder(k, simi, idxi);
         }
-    }
-
-#pragma omp parallel for
-    for (int i = 0; i < n * k; ++i) {
-        distances[i] = std::round(((float*)distances)[i]);
     }
 }
 
@@ -281,31 +274,70 @@ struct FlatHammingDis : DistanceComputer {
     }
 };
 
+
+template <class JaccardComputer>
+struct FlatJaccardDis : DistanceComputer {
+    const int code_size;
+    const uint8_t* b;
+    size_t ndis;
+    JaccardComputer jc;
+
+    float operator()(idx_t i) override {
+        ndis++;
+        return jc.jaccard(b + i * code_size);
+    }
+
+    float symmetric_dis(idx_t i, idx_t j) override {
+        return JaccardComputerDefault(b + j * code_size, code_size)
+                .jaccard(b + i * code_size);
+    }
+
+    explicit FlatJaccardDis(const IndexBinaryFlat& storage)
+            : code_size(storage.code_size),
+              b(storage.xb.data()),
+              ndis(0),
+              jc() {}
+
+    // NOTE: Pointers are cast from float in order to reuse the floating-point
+    //   DistanceComputer.
+    void set_query(const float* x) override {
+        jc.set((uint8_t*)x, code_size);
+    }
+
+    ~FlatJaccardDis() override {
+#pragma omp critical
+        { hnsw_stats.ndis += ndis; }
+    }
+};
+
 } // namespace
 
 DistanceComputer* IndexBinaryHNSW::get_distance_computer() const {
     IndexBinaryFlat* flat_storage = dynamic_cast<IndexBinaryFlat*>(storage);
-
     FAISS_ASSERT(flat_storage != nullptr);
-
-    switch (code_size) {
-        case 4:
-            return new FlatHammingDis<HammingComputer4>(*flat_storage);
-        case 8:
-            return new FlatHammingDis<HammingComputer8>(*flat_storage);
-        case 16:
-            return new FlatHammingDis<HammingComputer16>(*flat_storage);
-        case 20:
-            return new FlatHammingDis<HammingComputer20>(*flat_storage);
-        case 32:
-            return new FlatHammingDis<HammingComputer32>(*flat_storage);
-        case 64:
-            return new FlatHammingDis<HammingComputer64>(*flat_storage);
-        default:
-            break;
+    if(flat_storage->metric_type == MetricType::METRIC_HAMMING) {
+        switch (code_size) {
+            case 4:
+                return new FlatHammingDis<HammingComputer4>(*flat_storage);
+            case 8:
+                return new FlatHammingDis<HammingComputer8>(*flat_storage);
+            case 16:
+                return new FlatHammingDis<HammingComputer16>(*flat_storage);
+            case 20:
+                return new FlatHammingDis<HammingComputer20>(*flat_storage);
+            case 32:
+                return new FlatHammingDis<HammingComputer32>(*flat_storage);
+            case 64:
+                return new FlatHammingDis<HammingComputer64>(*flat_storage);
+            default:
+                break;
+        }
+        return new FlatHammingDis<HammingComputerDefault>(*flat_storage);
+    } else if (flat_storage->metric_type == MetricType::METRIC_JACCARD) {
+        auto* jaccard_dist = new FlatJaccardDis<JaccardComputerDefault>(*flat_storage);
+        return jaccard_dist;
     }
-
-    return new FlatHammingDis<HammingComputerDefault>(*flat_storage);
+    return nullptr;
 }
 
 } // namespace faiss

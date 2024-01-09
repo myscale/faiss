@@ -1,3 +1,6 @@
+#ifndef HAMMING_INL_H
+#define HAMMING_INL_H
+
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
@@ -527,12 +530,12 @@ void generalized_hammings_knn_hc(
  * in only the n-first lists, such that the sum of sizes of the
  * n lists is below k.
  */
-template <class HammingComputer>
+template <class BinaryComputer>
 struct HCounterState {
     int* counters;
     int64_t* ids_per_dis;
 
-    HammingComputer hc;
+    BinaryComputer hc;
     int thres;
     int count_lt;
     int count_eq;
@@ -553,7 +556,8 @@ struct HCounterState {
               k(k) {}
 
     void update_counter(const uint8_t* y, size_t j) {
-        int32_t dis = hc.hamming(y);
+        int32_t dis;
+        dis = hc.hamming(y);
 
         if (dis <= thres) {
             if (dis < thres) {
@@ -573,3 +577,5 @@ struct HCounterState {
 };
 
 } // namespace faiss
+
+#endif
