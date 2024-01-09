@@ -31,11 +31,11 @@
 #include <algorithm>
 #include <memory>
 #include <vector>
-
 #include <faiss/impl/AuxIndexStructures.h>
 #include <faiss/impl/FaissAssert.h>
 #include <faiss/utils/Heap.h>
 #include <faiss/utils/utils.h>
+#include <faiss/impl/IDSelector.h>
 
 static const size_t BLOCKSIZE_QUERY = 8192;
 
@@ -225,12 +225,14 @@ static void hammings_knn_mc(
         size_t na,
         size_t nb,
         size_t k,
-        int32_t* distances,
-        int64_t* labels) {
+        float* distances,
+        int64_t* labels,
+        const void* sel_void
+        ) {
+    const IDSelector* sel = reinterpret_cast<const IDSelector*>(sel_void);
     const int nBuckets = bytes_per_code * 8 + 1;
     std::vector<int> all_counters(na * nBuckets, 0);
     std::unique_ptr<int64_t[]> all_ids_per_dis(new int64_t[na * nBuckets * k]);
-
     std::vector<HCounterState<HammingComputer>> cs;
     for (size_t i = 0; i < na; ++i) {
         cs.push_back(HCounterState<HammingComputer>(
@@ -243,10 +245,13 @@ static void hammings_knn_mc(
 
     const size_t block_size = hamming_batch_size;
     for (size_t j0 = 0; j0 < nb; j0 += block_size) {
+
         const size_t j1 = std::min(j0 + block_size, nb);
-#pragma omp parallel for
         for (int64_t i = 0; i < na; ++i) {
             for (size_t j = j0; j < j1; ++j) {
+                if (sel && !sel->is_member(j)) {
+                    continue;
+                }
                 cs[i].update_counter(b + j * bytes_per_code, j);
             }
         }
@@ -258,14 +263,17 @@ static void hammings_knn_mc(
         int nres = 0;
         for (int b = 0; b < nBuckets && nres < k; b++) {
             for (int l = 0; l < csi.counters[b] && nres < k; l++) {
+                if (sel && !sel->is_member(csi.ids_per_dis[b * k + l])) {
+                    continue;
+                }
                 labels[i * k + nres] = csi.ids_per_dis[b * k + l];
                 distances[i * k + nres] = b;
-                nres++;
+                ++nres;
             }
         }
         while (nres < k) {
             labels[i * k + nres] = -1;
-            distances[i * k + nres] = std::numeric_limits<int32_t>::max();
+            distances[i * k + nres] = std::numeric_limits<float>::max();
             ++nres;
         }
     }
@@ -483,31 +491,12 @@ void hammings_knn_mc(
         size_t k,
         size_t ncodes,
         int32_t* distances,
-        int64_t* labels) {
-    switch (ncodes) {
-        case 4:
-            hammings_knn_mc<faiss::HammingComputer4>(
-                    4, a, b, na, nb, k, distances, labels);
-            break;
-        case 8:
-            // TODO(hoss): Write analog to hammings_knn_hc_1
-            // hammings_knn_hc_1 (ha, C64(a), C64(b), nb, order, true);
-            hammings_knn_mc<faiss::HammingComputer8>(
-                    8, a, b, na, nb, k, distances, labels);
-            break;
-        case 16:
-            hammings_knn_mc<faiss::HammingComputer16>(
-                    16, a, b, na, nb, k, distances, labels);
-            break;
-        case 32:
-            hammings_knn_mc<faiss::HammingComputer32>(
-                    32, a, b, na, nb, k, distances, labels);
-            break;
-        default:
-            hammings_knn_mc<faiss::HammingComputerDefault>(
-                    ncodes, a, b, na, nb, k, distances, labels);
-            break;
-    }
+        int64_t* labels,
+        const void* sel
+        ) {
+
+    hammings_knn_mc<faiss::HammingComputerDefault>(
+            ncodes, a, b, na, nb, k, reinterpret_cast<float*>(distances), labels, sel);
 }
 template <class HammingComputer>
 static void hamming_range_search_template(

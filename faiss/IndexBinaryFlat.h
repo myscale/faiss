@@ -28,7 +28,7 @@ struct IndexBinaryFlat : IndexBinary {
 
     size_t query_batch_size = 32;
 
-    explicit IndexBinaryFlat(idx_t d);
+    explicit IndexBinaryFlat(idx_t d, MetricType metric = METRIC_HAMMING);
 
     void add(idx_t n, const uint8_t* x) override;
 

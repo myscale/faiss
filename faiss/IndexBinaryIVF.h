@@ -59,7 +59,7 @@ struct IndexBinaryIVF : IndexBinary {
      * identifier. The pointer is borrowed: the quantizer should not
      * be deleted while the IndexBinaryIVF is in use.
      */
-    IndexBinaryIVF(IndexBinary* quantizer, size_t d, size_t nlist);
+    IndexBinaryIVF(IndexBinary* quantizer, size_t d, size_t nlist, MetricType metric_type = METRIC_HAMMING);
 
     IndexBinaryIVF();
 
@@ -218,7 +218,7 @@ struct BinaryInvertedListScanner {
     virtual void set_list(idx_t list_no, uint8_t coarse_dis) = 0;
 
     /// compute a single query-to-code distance
-    virtual uint32_t distance_to_code(const uint8_t* code) const = 0;
+    virtual float distance_to_code(const uint8_t* code) const = 0;
 
     /** compute the distances to codes. (distances, labels) should be
      * organized as a min- or max-heap

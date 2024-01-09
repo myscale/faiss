@@ -29,7 +29,7 @@ struct IndexBinaryHNSW : IndexBinary {
     IndexBinary* storage;
 
     explicit IndexBinaryHNSW();
-    explicit IndexBinaryHNSW(int d, int M = 32);
+    explicit IndexBinaryHNSW(int d, int M = 32, MetricType metric = METRIC_HAMMING);
     explicit IndexBinaryHNSW(IndexBinary* storage, int M = 32);
 
     ~IndexBinaryHNSW() override;
