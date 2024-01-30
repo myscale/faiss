@@ -52,6 +52,33 @@ int sgemm_(
         FINTEGER* ldc);
 }
 
+int sgemm_manual(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc
+        ){
+    for (int i = 0; i < *m; ++i) {
+        for (int j = 0; j < *n; ++j) {
+            float result = 0.0;
+            for (int l = 0; l < (*k); ++l) {
+                result += (*alpha) * a[i * (*lda) + l] * b[l * (*ldb) + j];
+            }
+            c[i * (*ldc) + j] = (*beta) * c[i * (*ldc) + j] + result;
+        }
+    }
+    return 0;
+}
+
 namespace faiss {
 
 /***************************************************************************
@@ -370,6 +397,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
             {
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
+#ifdef NDEBUG
                 sgemm_("Transpose",
                        "Not transpose",
                        &nyi,
@@ -383,6 +411,21 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                        &zero,
                        ip_block.get(),
                        &nyi);
+#else
+                sgemm_manual("Transpose",
+                       "Not transpose",
+                       &nyi,
+                       &nxi,
+                       &di,
+                       &one,
+                       y + j0 * d,
+                       &di,
+                       x + i0 * d,
+                       &di,
+                       &zero,
+                       ip_block.get(),
+                       &nyi);
+#endif
             }
 //#pragma omp parallel for
             for (int64_t i = i0; i < i1; i++) {
