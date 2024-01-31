@@ -32,6 +32,8 @@
 #define FINTEGER long
 #endif
 
+// Remove all OpenMP to avoid CPU interference
+
 extern "C" {
 
 /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
@@ -78,6 +80,13 @@ int sgemm_manual(
     }
     return 0;
 }
+
+
+#ifdef NDEBUG
+#define sgemm_in_use sgemm_
+#else
+#define sgemm_in_use sgemm_manual
+#endif
 
 namespace faiss {
 
@@ -397,8 +406,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
             {
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
-#ifdef NDEBUG
-                sgemm_("Transpose",
+                sgemm_in_use("Transpose",
                        "Not transpose",
                        &nyi,
                        &nxi,
@@ -411,21 +419,6 @@ void exhaustive_L2sqr_blas_cmax_avx2(
                        &zero,
                        ip_block.get(),
                        &nyi);
-#else
-                sgemm_manual("Transpose",
-                       "Not transpose",
-                       &nyi,
-                       &nxi,
-                       &di,
-                       &one,
-                       y + j0 * d,
-                       &di,
-                       x + i0 * d,
-                       &di,
-                       &zero,
-                       ip_block.get(),
-                       &nyi);
-#endif
             }
 //#pragma omp parallel for
             for (int64_t i = i0; i < i1; i++) {
