@@ -85,6 +85,7 @@ int sgemm_manual(
 #ifdef NDEBUG
 #define sgemm_func sgemm_
 #else
+// use sgemm_manual in debug mode to avoid sleep error in ClickHouse
 #define sgemm_func sgemm_manual
 #endif
 
