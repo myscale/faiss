@@ -83,9 +83,9 @@ int sgemm_manual(
 
 
 #ifdef NDEBUG
-#define sgemm_in_use sgemm_
+#define sgemm_func sgemm_
 #else
-#define sgemm_in_use sgemm_manual
+#define sgemm_func sgemm_manual
 #endif
 
 namespace faiss {
@@ -406,7 +406,7 @@ void exhaustive_L2sqr_blas_cmax_avx2(
             {
                 float one = 1, zero = 0;
                 FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
-                sgemm_in_use("Transpose",
+                sgemm_func("Transpose",
                        "Not transpose",
                        &nyi,
                        &nxi,
