@@ -218,8 +218,7 @@ void IndexHNSWfast::search(
     for (idx_t i0 = 0; i0 < n; i0 += check_period) {
         idx_t i1 = std::min(i0 + check_period, n);
 
-/// current we disable omp, until find other solution
-/// https://git.moqi.ai/mqdb/search-index/-/issues/7#note_55488
+/// Disable omp for more consistent results
 //#pragma omp parallel reduction(+ : nreorder)
         {
             DistanceComputer* dis = storage_distance_computer(storage);
