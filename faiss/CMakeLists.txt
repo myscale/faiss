@@ -259,8 +259,7 @@ target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 if(MYSCALE_MODE)
   set (MYSCALE_MODE_LINK_LIBRARIES
        ${MYSCALE_MODE_LINK_LIBRARIES}
-       ${TOOLCHAIN_PATH}/blas/libblas.a
-       ${TOOLCHAIN_PATH}/lapack/liblapack.a
+       ${TOOLCHAIN_PATH}/openblas/libopenblas.a
        ${TOOLCHAIN_PATH}/${CMAKE_C_COMPILER_TARGET}/lib64/libgfortran.so.5.0.0
        ${TOOLCHAIN_PATH}/lib/${CMAKE_C_COMPILER_TARGET}/libomp.so.5)
   message(STATUS "MYSCALE_MODE_LINK_LIBRARIES: ${MYSCALE_MODE_LINK_LIBRARIES}")
