@@ -258,12 +258,12 @@ target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 
 if(MYSCALE_MODE)
   if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "x86_64")
-    target_link_libraries(faiss PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_intel_lp64.a)
-    target_link_libraries(faiss PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_intel_thread.a)
-    target_link_libraries(faiss PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_core.a)
-    target_link_libraries(faiss_avx2 PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_intel_lp64.a)
-    target_link_libraries(faiss_avx2 PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_intel_thread.a)
-    target_link_libraries(faiss_avx2 PRIVATE ${TOOLCHAIN_PATH}/mkl/libmkl_core.a)
+    target_link_libraries(faiss PRIVATE
+      "$<LINK_GROUP:RESCAN,${TOOLCHAIN_PATH}/mkl/libmkl_intel_lp64.a;${TOOLCHAIN_PATH}/mkl/libmkl_intel_thread.a;${TOOLCHAIN_PATH}/mkl/libmkl_core.a>"
+    )
+    target_link_libraries(faiss_avx2 PRIVATE
+      "$<LINK_GROUP:RESCAN,${TOOLCHAIN_PATH}/mkl/libmkl_intel_lp64.a;${TOOLCHAIN_PATH}/mkl/libmkl_intel_thread.a;${TOOLCHAIN_PATH}/mkl/libmkl_core.a>"
+    )
   elseif (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
     target_link_libraries(faiss PRIVATE ${TOOLCHAIN_PATH}/blas/libblas.a)
     target_link_libraries(faiss_avx2 PRIVATE ${TOOLCHAIN_PATH}/blas/libblas.a)
