@@ -257,11 +257,23 @@ target_link_libraries(faiss PRIVATE OpenMP::OpenMP_CXX)
 target_link_libraries(faiss_avx2 PRIVATE OpenMP::OpenMP_CXX)
 
 if(MYSCALE_MODE)
+  if(SANITIZE STREQUAL "memory")
+    # When building faiss with memory sanitizer, we will link with libblas 
+    # and liblapack, because OpenBLAS is not compatible with memory sanitizer.
+    # See https://git.moqi.ai/mqdb/ClickHouse/-/issues/362#note_83111
+    set(BLAS_LIB
+      ${TOOLCHAIN_PATH}/blas/libblas.a
+      ${TOOLCHAIN_PATH}/lapack/liblapack.a)
+  else()
+    set(BLAS_LIB 
+      ${TOOLCHAIN_PATH}/openblas/libopenblas.a)
+  endif()
+  message(STATUS "BLAS_LIB: ${BLAS_LIB}")
   set (MYSCALE_MODE_LINK_LIBRARIES
-       ${MYSCALE_MODE_LINK_LIBRARIES}
-       ${TOOLCHAIN_PATH}/openblas/libopenblas.a
-       ${TOOLCHAIN_PATH}/${CMAKE_C_COMPILER_TARGET}/lib64/libgfortran.so.5.0.0
-       ${TOOLCHAIN_PATH}/lib/${CMAKE_C_COMPILER_TARGET}/libomp.so.5)
+      ${MYSCALE_MODE_LINK_LIBRARIES}
+      ${BLAS_LIB}
+      ${TOOLCHAIN_PATH}/${CMAKE_C_COMPILER_TARGET}/lib64/libgfortran.so.5.0.0
+      ${TOOLCHAIN_PATH}/lib/${CMAKE_C_COMPILER_TARGET}/libomp.so.5)
   message(STATUS "MYSCALE_MODE_LINK_LIBRARIES: ${MYSCALE_MODE_LINK_LIBRARIES}")
   target_link_libraries(faiss PRIVATE ${MYSCALE_MODE_LINK_LIBRARIES})
   target_link_libraries(faiss_avx2 PRIVATE ${MYSCALE_MODE_LINK_LIBRARIES})
