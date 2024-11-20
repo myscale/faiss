@@ -293,44 +293,46 @@ else()
   endif()
 endif()
 
-install(TARGETS faiss
-  EXPORT faiss-targets
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-if(FAISS_OPT_LEVEL STREQUAL "avx2")
-  install(TARGETS faiss_avx2
+if (NOT MYSCALE_MODE)
+  install(TARGETS faiss
     EXPORT faiss-targets
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+  if(FAISS_OPT_LEVEL STREQUAL "avx2")
+    install(TARGETS faiss_avx2
+      EXPORT faiss-targets
+      ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    )
+  endif()
+  
+  foreach(header ${FAISS_HEADERS})
+    get_filename_component(dir ${header} DIRECTORY )
+    install(FILES ${header}
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/faiss/${dir}
+    )
+  endforeach()
+  
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file(
+    "${PROJECT_BINARY_DIR}/cmake/faiss-config-version.cmake"
+    VERSION ${CMAKE_PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+  )
+  
+  configure_file(${PROJECT_SOURCE_DIR}/cmake/faiss-config.cmake.in
+    ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
+    COPYONLY
+)
+  install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
+    ${PROJECT_BINARY_DIR}/cmake/faiss-config-version.cmake
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
+  )
+
+  install(EXPORT faiss-targets
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
   )
 endif()
-
-foreach(header ${FAISS_HEADERS})
-  get_filename_component(dir ${header} DIRECTORY )
-  install(FILES ${header}
-    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/faiss/${dir}
-  )
-endforeach()
-
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  "${PROJECT_BINARY_DIR}/cmake/faiss-config-version.cmake"
-  VERSION ${CMAKE_PROJECT_VERSION}
-  COMPATIBILITY AnyNewerVersion
-)
-
-configure_file(${PROJECT_SOURCE_DIR}/cmake/faiss-config.cmake.in
-  ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
-  COPYONLY
-)
-install(FILES ${PROJECT_BINARY_DIR}/cmake/faiss-config.cmake
-  ${PROJECT_BINARY_DIR}/cmake/faiss-config-version.cmake
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
-
-install(EXPORT faiss-targets
-  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/faiss
-)
